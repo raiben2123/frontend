@@ -1,0 +1,146 @@
+/* RESET */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: "Arial", sans-serif;
+}
+
+/* SIDEBAR */
+#MainSide {
+    background-color: #333;
+    color: #fff;
+    width: 250px;
+    height: 94.6vh;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.3s ease;
+    box-shadow: 3px 0 10px rgba(0, 0, 0, 0.3);
+}
+
+.sidebar-closed {
+    transform: translateX(-72%);
+}
+
+.sidebar-open {
+    transform: translateX(0);
+}
+
+/* HEADER TOGGLE BUTTON */
+.sidebar-header {
+    display: flex;
+    justify-content: flex-end;
+    padding: 10px;
+}
+
+.toggle-btn {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: color 0.3s;
+}
+
+.toggle-btn:hover {
+    color: #00aaff;
+}
+
+.icon {
+    font-size: 1.5rem;
+}
+
+/* NAVIGATION CONTENT */
+.sidebar-content {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-list,
+.options-list {
+    list-style: none;
+}
+
+.sidebar-list li,
+.options-list li {
+    padding: 12px 20px;
+    transition: background 0.3s, color 0.3s;
+}
+
+.sidebar-list li:hover,
+.options-list li:hover {
+    background-color: #00aaff;
+    cursor: pointer;
+}
+
+.enlace {
+    text-decoration: none;
+    color: white;
+    display: block;
+}
+
+.enlace:hover {
+    color: #f4f4f4;
+}
+
+/* OPTIONS TOGGLE */
+.sidebar-options {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    margin-top: 50%;
+}
+
+.options-btn {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.2rem;
+    margin-left: 20px;
+    cursor: pointer;
+    transition: color 0.3s;
+}
+
+.options-btn:hover {
+    color: #00aaff;
+}
+
+.options-list {
+    margin-top: 10px;
+}
+
+.options-list li {
+    padding-left: 30px;
+}
+
+.sidebar-closed > nav > ul {
+    display: none;
+}
+
+/* ESTILOS DE TABLA */
+#EncabezadoTabla {
+    background-color: #333; /* Color de fondo deseado */
+    color: #fff; /* Color del texto */
+    padding: 10px; /* Espaciado */
+    text-align: left; /* Alinear el texto */
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+table th, table td {
+    padding: 10px;
+    border: 1px solid #ddd;
+}
+
+/* Estilo para las filas de la tabla */
+table tr:nth-child(even) {
+    background-color: #f2f2f2; /* Color de fondo para filas pares */
+}
+
+table tr:hover {
+    background-color: #ddd; /* Color al pasar el mouse */
+}

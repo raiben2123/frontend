@@ -1,0 +1,15 @@
+.App {
+  text-align: center;
+  height: 100vh;
+}
+#App{
+  height: 100vh;
+}
+#Home{
+  height: 100vh;
+}
+#Contenido{
+  height: calc(100% - 81px);
+  display: flex;
+  flex-direction: row;
+}
