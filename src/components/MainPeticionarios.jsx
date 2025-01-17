@@ -101,6 +101,7 @@ const MainPeticionarios = ({ className }) => {
                 setIsEmpresaModalOpen(true);
                 return; // Salimos de la función para no continuar
             }
+            console.log(peticionarioData);
             const response = peticionarioData.id
                 ? await fetch(`http://localhost:8081/api/peticionarios/${peticionarioData.id}`, {
                     method: 'PUT',

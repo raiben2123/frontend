@@ -144,3 +144,31 @@ table tr:nth-child(even) {
 table tr:hover {
     background-color: #ddd; /* Color al pasar el mouse */
 }
+
+/* Botón de Refrescar */
+.refresh-data {
+    display: flex;
+    justify-content: center; /* Centrar horizontalmente */
+    align-items: center; /* Centrar verticalmente */
+    margin-top: auto; /* Empujar al final del sidebar */
+    padding: 10px 0; /* Añadir algo de espacio */
+}
+
+.refresh-btn {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: color 0.3s;
+}
+
+.refresh-btn:hover {
+    color: #00aaff;
+}
+
+.refresh-label {
+    color: white;
+    margin-left: 5px; /* Espacio entre el icono y el texto */
+    font-size: 0.9rem;
+}

@@ -1,35 +1,25 @@
-import React, { useState, useEffect } from "react";
+import React, { useContext, useState } from "react";
 import '../css/MainClasificaciones.css';
 import busqueda from '../img/busqueda.png';
 import ModalClasificaciones from './ModalClasificaciones';
-import ModalGenerico from './ModalGenerico'; // Importar el modal genérico
+import ModalGenerico from './ModalGenerico';
+import { ClasificacionesContext } from '../contexts/ClasificacionesContext';
 
 const MainClasificaciones = ({ className }) => {
+    const { clasificaciones, refreshClasificaciones, loading } = useContext(ClasificacionesContext);
     const [filtroExpanded, setFiltroExpanded] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isModalConfirmacionOpen, setIsModalConfirmacionOpen] = useState(false);
-    const [clasificaciones, setClasificaciones] = useState([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage] = useState(9);
     const [selectedClasificacion, setSelectedClasificacion] = useState(null);
     const [clasificacionToDelete, setClasificacionToDelete] = useState(null);
-    const [searchTerm, setSearchTerm] = useState(''); // Estado para el término de búsqueda
+    const [searchTerm, setSearchTerm] = useState('');
+
+    if (loading) return <div>Cargando clasificaciones...</div>;
 
     const toggleFiltro = () => {
         setFiltroExpanded(!filtroExpanded);
-    };
-
-    const fetchClasificaciones = async () => {
-        try {
-            const response = await fetch('http://localhost:8081/api/clasificaciones');
-            if (!response.ok) {
-                throw new Error('Error al obtener las clasificaciones');
-            }
-            const data = await response.json();
-            setClasificaciones(data);
-        } catch (error) {
-            console.error(error);
-        }
     };
 
     const handleAdd = async (newClasificacion) => {
@@ -44,7 +34,7 @@ const MainClasificaciones = ({ className }) => {
             if (!response.ok) {
                 throw new Error('Error al añadir la clasificación');
             }
-            fetchClasificaciones();
+            refreshClasificaciones();
             setIsModalOpen(false);
         } catch (error) {
             console.error(error);
@@ -68,7 +58,7 @@ const MainClasificaciones = ({ className }) => {
             if (!response.ok) {
                 throw new Error('Error al actualizar la clasificación');
             }
-            fetchClasificaciones();
+            refreshClasificaciones();
             setIsModalOpen(false);
             setSelectedClasificacion(null);
         } catch (error) {
@@ -85,7 +75,7 @@ const MainClasificaciones = ({ className }) => {
                 if (!response.ok) {
                     throw new Error('Error al eliminar la clasificación');
                 }
-                fetchClasificaciones();
+                refreshClasificaciones();
                 setClasificacionToDelete(null);
                 setIsModalConfirmacionOpen(false);
             } catch (error) {
@@ -99,23 +89,22 @@ const MainClasificaciones = ({ className }) => {
         setIsModalConfirmacionOpen(true);
     };
 
-    useEffect(() => {
-        fetchClasificaciones();
-    }, []);
-
     const indexOfLastItem = currentPage * itemsPerPage;
     const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-    const filteredClasificaciones = clasificaciones.filter(clasificacion =>
-        clasificacion.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        clasificacion.acronym.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredClasificaciones = Array.isArray(clasificaciones) ? clasificaciones.filter(clasificacion => {
+        if (clasificacion && typeof clasificacion.name === 'string' && typeof clasificacion.acronym === 'string') {
+            return clasificacion.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                clasificacion.acronym.toLowerCase().includes(searchTerm.toLowerCase());
+        }
+        return false; // Si no tiene name y acronym como strings, no lo incluimos en el filtro
+    }) : [];
+
     const currentItems = filteredClasificaciones.slice(indexOfFirstItem, indexOfLastItem);
     const totalPages = Math.ceil(filteredClasificaciones.length / itemsPerPage);
 
     const handlePageChange = (page) => {
         setCurrentPage(page);
     };
-
     return (
         <div id="MainClasificaciones" className={className}>
             <div id="Encabezado">
@@ -130,7 +119,7 @@ const MainClasificaciones = ({ className }) => {
                             onBlur={toggleFiltro}
                             placeholder="Buscar..."
                             value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)} // Actualizar el término de búsqueda
+                            onChange={(e) => setSearchTerm(e.target.value)}
                         />
                         <img src={busqueda} alt="Buscar" id="lupa" />
                     </div>
@@ -161,29 +150,30 @@ const MainClasificaciones = ({ className }) => {
                 <div id="Paginacion">
                     <span>Página {currentPage} de {totalPages}</span>
                     <div id="Botones">
-                        <button 
-                            disabled={currentPage === 1} 
+                        <button
+                            disabled={currentPage === 1}
                             onClick={() => handlePageChange(currentPage - 1)}>Anterior</button>
-                        <button 
-                            disabled={currentPage === totalPages} 
+                        <button
+                            disabled={currentPage === totalPages}
                             onClick={() => handlePageChange(currentPage + 1)}>Siguiente</button>
                     </div>
                 </div>
                 <div id="Botones">
                     <button onClick={() => setIsModalOpen(true)}>Añadir Nuevo</button>
-                    <ModalClasificaciones 
-                        isOpen={isModalOpen} 
-                        onClose={() => {setIsModalOpen(false); setClasificacionToDelete(null)}} 
-                        onAdd={handleAdd} 
-                        onUpdate={handleUpdate} 
-                        clasificacion={selectedClasificacion} 
+                    <button onClick={refreshClasificaciones}>Refrescar Datos</button>
+                    <ModalClasificaciones
+                        isOpen={isModalOpen}
+                        onClose={() => { setIsModalOpen(false); setSelectedClasificacion(null) }}
+                        onAdd={handleAdd}
+                        onUpdate={handleUpdate}
+                        clasificacion={selectedClasificacion}
                     />
-                    <ModalGenerico 
-                        isOpen={isModalConfirmacionOpen} 
-                        title="Confirmar Eliminación" 
-                        message="¿Estás seguro de que deseas eliminar esta clasificación?" 
-                        onClose={() => {setIsModalConfirmacionOpen(false); setClasificacionToDelete(null)}} 
-                        onConfirm={handleDelete} 
+                    <ModalGenerico
+                        isOpen={isModalConfirmacionOpen}
+                        title="Confirmar Eliminación"
+                        message="¿Estás seguro de que deseas eliminar esta clasificación?"
+                        onClose={() => { setIsModalConfirmacionOpen(false); setClasificacionToDelete(null) }}
+                        onConfirm={handleDelete}
                     />
                 </div>
             </div>

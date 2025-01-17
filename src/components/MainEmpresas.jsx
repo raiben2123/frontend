@@ -40,6 +40,7 @@ const MainEmpresas = ({ className }) => {
                 throw new Error('Error al obtener las empresas');
             }
             const data = await response.json();
+            console.log(data)
             setEmpresas(data);
         } catch (error) {
             console.error(error);

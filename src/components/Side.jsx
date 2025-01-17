@@ -2,9 +2,9 @@ import React, { useState } from "react";
 import "../css/Side.css";
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faXmark, faBars, faGear } from "@fortawesome/free-solid-svg-icons";
+import { faXmark, faBars, faGear, faSync } from "@fortawesome/free-solid-svg-icons";
 
-const MainSide = ({ isOpen, toggleSidebar }) => {
+const MainSide = ({ isOpen, toggleSidebar, onRefresh }) => {
     const [showOptions, setShowOptions] = useState(false);
 
     const toggleOptions = () => {
@@ -70,6 +70,12 @@ const MainSide = ({ isOpen, toggleSidebar }) => {
                     )}
                 </div>
             </nav>
+            <div className="refresh-data">
+                <button onClick={onRefresh} className="refresh-btn">
+                    <FontAwesomeIcon icon={faSync} className="icon" />
+                </button>
+                <span className="refresh-label">Refrescar</span>
+            </div>
         </div>
     );
 };
