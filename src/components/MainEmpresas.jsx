@@ -1,24 +1,19 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import '../css/MainEmpresas.css';
 import busqueda from '../img/busqueda.png';
-import ModalEmpresas from './ModalEmpresas';
-import ModalGenerico from './ModalGenerico';
-import ModalPeticionarios from './ModalPeticionarios';
 import { DndContext, closestCenter } from '@dnd-kit/core';
 import { arrayMove, SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable';
 import { SortableItem } from './SortableItem';
+import ModalEmpresas from './ModalEmpresas';
+import ModalGenerico from './ModalGenerico';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Toaster, toast } from 'sonner';
+import { fetchEmpresas, fetchPeticionarios } from "../api/apiService";
 
 const MainEmpresas = ({ className }) => {
-    const [filtroExpanded, setFiltroExpanded] = useState(false);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [isModalConfirmacionOpen, setIsModalConfirmacionOpen] = useState(false);
-    const [isModalNuevoRepresentanteOpen, setIsModalNuevoRepresentanteOpen] = useState(false);
-    const [empresas, setEmpresas] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 5;
-    const [selectedEmpresa, setSelectedEmpresa] = useState(null);
-    const [empresaToDelete, setEmpresaToDelete] = useState(null);
     const [columns, setColumns] = useState([
         { id: 'cif', label: 'CIF' },
         { id: 'name', label: 'Nombre' },
@@ -28,122 +23,131 @@ const MainEmpresas = ({ className }) => {
         { id: 'representante', label: 'Representante' },
         { id: 'actions', label: 'Acciones' }
     ]);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedEmpresa, setSelectedEmpresa] = useState(null);
+    const [isModalConfirmacionOpen, setIsModalConfirmacionOpen] = useState(false);
+    const [empresaToDelete, setEmpresaToDelete] = useState(null);
 
-    const toggleFiltro = () => {
-        setFiltroExpanded(!filtroExpanded);
-    };
+    const queryClient = useQueryClient();
 
-    const fetchEmpresas = async () => {
-        try {
-            const response = await fetch('http://localhost:8081/api/empresas');
-            if (!response.ok) {
-                throw new Error('Error al obtener las empresas');
+    // Use Query for fetching empresas
+    const { data: empresas, isLoading, isError } = useQuery({
+        queryKey: ['empresas'],
+        queryFn: fetchEmpresas
+    });
+
+    const { data: peticionarios} = useQuery({
+        queryKey: ['peticionarios'],
+        queryFn: fetchPeticionarios
+    });
+
+    // Mutation for adding or updating an empresa
+    const mutationEmpresa = useMutation({
+        mutationFn: (empresaData) => {
+            let url, method;
+            if (empresaData.id) {
+                url = `http://localhost:8081/api/empresas/${empresaData.id}`;
+                method = 'PUT';
+            } else {
+                url = 'http://localhost:8081/api/empresas';
+                method = 'POST';
             }
-            const data = await response.json();
-            console.log(data)
-            setEmpresas(data);
-        } catch (error) {
-            console.error(error);
-        }
-    };
 
-    useEffect(() => {
-        fetchEmpresas();
-    }, []);
-
-    const handleAddOrUpdate = async (empresa) => {
-        const isCIF = /^[A-Z]\d{8}$/.test(empresa.cif); // Validar si es CIF
-
-        if (!isCIF) {
-            alert("El formato de CIF es incorrecto");
-            return;
-        }
-
-        try {
-            const response = await fetch(`http://localhost:8081/api/empresas${empresa.id ? `/${empresa.id}` : ''}`, {
-                method: empresa.id ? 'PUT' : 'POST',
+            return fetch(url, {
+                method: method,
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(empresa),
+                body: JSON.stringify(empresaData),
             });
-            if (!response.ok) {
-                throw new Error('Error al guardar la empresa');
-            }
-            fetchEmpresas();
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['empresas'] });
+            toast.success('Empresa guardada correctamente', {
+                style: {
+                    background: '#4CAF50',
+                    color: 'white',
+                    fontWeight: 'bold'
+                }
+            });
             setIsModalOpen(false);
             setSelectedEmpresa(null);
-        } catch (error) {
-            console.error(error);
-        }
-    };
-
-    const handleDelete = async () => {
-        if (empresaToDelete) {
-            try {
-                const response = await fetch(`http://localhost:8081/api/empresas/${empresaToDelete}`, {
-                    method: 'DELETE',
-                });
-                if (!response.ok) {
-                    throw new Error('Error al eliminar la empresa');
+        },
+        onError: (error) => {
+            toast.error('Error al guardar la empresa: ' + error.message, {
+                style: {
+                    background: '#F44336',
+                    color: 'white',
+                    fontWeight: 'bold'
                 }
-                fetchEmpresas();
-                setEmpresaToDelete(null);
-                setIsModalConfirmacionOpen(false);
-            } catch (error) {
-                console.error(error);
-            }
-        }
-    };
+            });
+        },
+    });
 
-    const openDeleteModal = (id) => {
-        setEmpresaToDelete(id);
-        setIsModalConfirmacionOpen(true);
-    };
+    // Mutation for deleting empresa
+    const mutationDeleteEmpresa = useMutation({
+        mutationFn: (id) =>
+            fetch(`http://localhost:8081/api/empresas/${id}`, {
+                method: 'DELETE',
+            }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['empresas'] });
+            toast.success('Empresa eliminada correctamente', {
+                style: {
+                    background: '#4CAF50',
+                    color: 'white',
+                    fontWeight: 'bold'
+                }
+            });
+            setIsModalConfirmacionOpen(false);
+            setEmpresaToDelete(null);
+        },
+        onError: (error) => {
+            toast.error('Error al eliminar la empresa: ' + error.message, {
+                style: {
+                    background: '#F44336',
+                    color: 'white',
+                    fontWeight: 'bold'
+                }
+            });
+        },
+    });
 
-    const filteredEmpresas = empresas
-        .filter(e => (
-            e.cif.includes(searchTerm) ||
-            (e.name && e.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (e.address && e.address.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (e.tlf && e.tlf.includes(searchTerm)) ||
-            (e.email && e.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (e.representante && (
-                e.representante.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                e.representante.surname.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                e.representante.dni.toLowerCase().includes(searchTerm.toLowerCase())
-            ))
-        ));
+    const filteredEmpresas = Array.isArray(empresas) ? empresas.filter(empresa =>
+        Object.keys(empresa).some(key =>
+            String(empresa[key]).toLowerCase().includes(searchTerm.toLowerCase())
+        )
+    ) : [];
 
     const currentItems = filteredEmpresas.slice(
-        (currentPage - 1) * itemsPerPage, currentPage * itemsPerPage
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage
     );
 
     const totalPages = Math.ceil(filteredEmpresas.length / itemsPerPage);
 
     const handleDragEnd = (event) => {
         const { active, over } = event;
-
         if (active.id !== over.id) {
-            setColumns((items) => {
-                const oldIndex = items.findIndex(item => item.id === active.id);
-                const newIndex = items.findIndex(item => item.id === over.id);
-                return arrayMove(items, oldIndex, newIndex);
+            setColumns(columns => {
+                const oldIndex = columns.findIndex(c => c.id === active.id);
+                const newIndex = columns.findIndex(c => c.id === over.id);
+                return arrayMove(columns, oldIndex, newIndex);
             });
         }
     };
 
+    if (isLoading) return <div>Cargando empresas...</div>;
+    if (isError) return <div>Error al cargar datos: {isError.message}</div>;
     return (
         <div id="MainEmpresas" className={className}>
+            <Toaster />
             <div id="Encabezado">
                 <h2>EMPRESAS</h2>
                 <div id="filtroContainer">
                     <input
                         type="text"
                         id="filtro"
-                        className={filtroExpanded ? 'expanded' : ''}
-                        onFocus={toggleFiltro}
-                        onBlur={toggleFiltro}
                         placeholder="Buscar..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
@@ -152,8 +156,13 @@ const MainEmpresas = ({ className }) => {
                 </div>
             </div>
 
+            <button onClick={() => { setSelectedEmpresa(null); setIsModalOpen(true); }}>Añadir Nueva Empresa</button>
+
             <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                <SortableContext items={columns.filter(column => column.id !== 'actions').map(column => column.id)} strategy={horizontalListSortingStrategy}>
+                <SortableContext
+                    items={columns.filter(column => column.id !== 'actions').map(column => column.id)}
+                    strategy={horizontalListSortingStrategy}
+                >
                     <div id="TablaEmpresas">
                         <div id="SubEncabezadoTabla">
                             <h3>Empresas</h3>
@@ -163,13 +172,12 @@ const MainEmpresas = ({ className }) => {
                                 <thead>
                                     <tr>
                                         {columns.map((column) => (
-                                            column.id !== 'actions' ? (
+                                            column.id !== 'actions' ?
                                                 <SortableItem key={column.id} id={column.id}>
                                                     {column.label}
                                                 </SortableItem>
-                                            ) : (
+                                                :
                                                 <th key={column.id}>{column.label}</th>
-                                            )
                                         ))}
                                     </tr>
                                 </thead>
@@ -181,10 +189,11 @@ const MainEmpresas = ({ className }) => {
                                                     {column.id === 'actions' ? (
                                                         <>
                                                             <button onClick={() => { setSelectedEmpresa(empresa); setIsModalOpen(true); }}>Modificar</button>
-                                                            <button className="btn-delete" onClick={() => openDeleteModal(empresa.id)}>Eliminar</button>
+                                                            <button className="btn-delete" onClick={() => { setEmpresaToDelete(empresa.id); setIsModalConfirmacionOpen(true); }}>Eliminar</button>
                                                         </>
                                                     ) : column.id === 'representante' ? (
-                                                        empresa.representante ? `${empresa.representante.name} ${empresa.representante.surname}` : ''
+                                                        empresa.representanteId ?
+                                                            (peticionarios && peticionarios.find(p => p.id === empresa.representanteId)?.name + " " + peticionarios.find(p => p.id === empresa.representanteId)?.surname) || '' : ''
                                                     ) : (
                                                         empresa[column.id]
                                                     )}
@@ -197,8 +206,8 @@ const MainEmpresas = ({ className }) => {
                             <div id="PaginacionEmpresas">
                                 <span>Página {currentPage} de {totalPages}</span>
                                 <div id="Botones">
-                                    <button disabled={currentPage === 1} onClick={() => setCurrentPage(currentPage - 1)}>Anterior</button>
-                                    <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(currentPage + 1)}>Siguiente</button>
+                                    <button disabled={currentPage === 1} onClick={() => setCurrentPage(prev => prev - 1)}>Anterior</button>
+                                    <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(prev => prev + 1)}>Siguiente</button>
                                 </div>
                             </div>
                         </div>
@@ -206,29 +215,19 @@ const MainEmpresas = ({ className }) => {
                 </SortableContext>
             </DndContext>
 
-            <div id="Botones">
-                <button onClick={() => { setSelectedEmpresa(null); setIsModalOpen(true); }}>Añadir Nuevo</button>
-            </div>
-
             <ModalEmpresas
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
-                onAddOrUpdate={handleAddOrUpdate}
+                onAddOrUpdate={(empresa) => mutationEmpresa.mutate(empresa)}
                 empresa={selectedEmpresa}
-                onNuevaRepresentante={() => setIsModalNuevoRepresentanteOpen(true)}
             />
+
             <ModalGenerico
                 isOpen={isModalConfirmacionOpen}
                 title="Confirmar Eliminación"
                 message="¿Estás seguro de que deseas eliminar esta empresa?"
                 onClose={() => setIsModalConfirmacionOpen(false)}
-                onConfirm={handleDelete}
-            />
-            <ModalPeticionarios
-                isOpen={isModalNuevoRepresentanteOpen}
-                onClose={() => setIsModalNuevoRepresentanteOpen(false)}
-                onAddOrUpdate={fetchEmpresas}
-                peticionario={null}
+                onConfirm={() => mutationDeleteEmpresa.mutate(empresaToDelete)}
             />
         </div>
     );

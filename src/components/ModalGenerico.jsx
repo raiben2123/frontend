@@ -11,7 +11,7 @@ const ModalGenerico = ({ isOpen, title, message, onClose, onConfirm }) => {
                 <h2>{title}</h2>
                 <p>{message}</p>
                 <div className="modal-buttons">
-                    <button onClick={onConfirm}>Confirmar</button>
+                    <button onClick={onConfirm}>Confirmar</button> {/* Aquí se pasa la función onConfirm */}
                     <button onClick={onClose}>Cancelar</button>
                 </div>
             </div>

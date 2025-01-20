@@ -3,7 +3,7 @@ import '../css/ModalClasificaciones.css'; // Asegúrate de tener el CSS correspo
 
 const ModalEstadosExpedientes = ({ isOpen, onClose, onAdd, onUpdate, estadosExpedientes }) => {
     const [formData, setFormData] = useState({ name: '' });
-        const [error, setError] = useState(''); // Estado para manejar el error
+    const [error, setError] = useState(''); // Estado para manejar el error
 
     useEffect(() => {
         if (estadosExpedientes) {
@@ -13,12 +13,14 @@ const ModalEstadosExpedientes = ({ isOpen, onClose, onAdd, onUpdate, estadosExpe
             });
         } else {
             setFormData({ name: '' });
+            setError(''); // Resetea el error si se abre el modal para añadir
         }
     }, [estadosExpedientes]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData((prev) => ({ ...prev, [name]: value }));
+        setError(''); // Resetea el error al cambiar el nombre  
     };
 
     const handleSubmit = () => {
@@ -26,11 +28,12 @@ const ModalEstadosExpedientes = ({ isOpen, onClose, onAdd, onUpdate, estadosExpe
             setError('El nombre no puede estar vacío');
             return; // No se ejecuta onAdd ni onUpdate
         }
-        
+
         if (formData.id) {
             onUpdate(formData);
         } else {
             onAdd(formData);
+            setFormData({ name: '' });
         }
     };
 

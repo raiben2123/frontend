@@ -33,6 +33,7 @@ const ModalDepartamentos = ({ isOpen, onClose, onAdd, onUpdate, departamento }) 
             onUpdate(formData);
         } else {
             onAdd(formData);
+            setFormData({ name: '' });
         }
     };
 

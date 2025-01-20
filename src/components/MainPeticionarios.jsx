@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import '../css/MainPeticionarios.css';
 import busqueda from '../img/busqueda.png';
 import { DndContext, closestCenter } from '@dnd-kit/core';
@@ -7,10 +7,10 @@ import { SortableItem } from './SortableItem';
 import ModalPeticionarios from './ModalPeticionarios';
 import ModalGenerico from './ModalGenerico';
 import ModalEmpresas from './ModalEmpresas';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Toaster, toast } from 'sonner';
 
 const MainPeticionarios = ({ className }) => {
-    const [peticionarios, setPeticionarios] = useState([]);
-    const [empresas, setEmpresas] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPageDNI, setCurrentPageDNI] = useState(1);
     const [currentPageNIF, setCurrentPageNIF] = useState(1);
@@ -42,145 +42,201 @@ const MainPeticionarios = ({ className }) => {
     const [isEmpresaModalOpen, setIsEmpresaModalOpen] = useState(false);
     const [currentEmpresa, setCurrentEmpresa] = useState(null);
 
-    const fetchPeticionarios = async () => {
-        try {
-            const response = await fetch('http://localhost:8081/api/peticionarios');
-            if (!response.ok) {
-                throw new Error('Error al obtener los peticionarios');
+    const queryClient = useQueryClient();
+
+    // Use Query for fetch peticionarios
+    const { data: peticionarios, isLoading: loadingPeticionarios, isError: errorPeticionarios } = useQuery({
+        queryKey: ['peticionarios'],
+        queryFn: () => fetch('http://localhost:8081/api/peticionarios').then(res => res.json()),
+    });
+
+    const { data: empresas, isLoading: loadingEmpresas, isError: errorEmpresas } = useQuery({
+        queryKey: ['empresas'],
+        queryFn: () => fetch('http://localhost:8081/api/empresas').then(res => res.json()),
+    });
+
+    const mutationPeticionario = useMutation({
+        mutationFn: (peticionarioData) => {
+            console.log('Datos del peticionario antes de enviar:', peticionarioData);
+            
+            let url, method;
+            if (peticionarioData.id) {
+                url = `http://localhost:8081/api/peticionarios/${peticionarioData.id}`;
+                method = 'PUT';
+            } else {
+                url = 'http://localhost:8081/api/peticionarios';
+                method = 'POST';
             }
-            const data = await response.json();
-            setPeticionarios(data);
-        } catch (error) {
-            console.error(error);
-        }
-    };
+    
+            console.log('URL:', url);
+            console.log('Método:', method);
+            
+            return fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(peticionarioData),
+            });
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['peticionarios'] });
+            toast.success('Peticionario guardado correctamente', {
+                style: {
+                    background: '#4CAF50',
+                    color: 'white',
+                    fontWeight: 'bold'
+                }
+            });
+            setIsModalOpen(false);
+        },
+        onError: (error) => {
+            toast.error('Error al guardar el peticionario: ' + error.message, {
+                style: {
+                    background: '#F44336',
+                    color: 'white',
+                    fontWeight: 'bold'
+                }
+            });
+        },
+    });
 
-    const fetchEmpresas = async () => {
-        try {
-            const response = await fetch('http://localhost:8081/api/empresas');
-            if (!response.ok) {
-                throw new Error('Error al obtener las empresas');
-            }
-            const data = await response.json();
-            setEmpresas(data);
-        } catch (error) {
-            console.error(error);
-        }
-    };
+    // Mutation for deleting peticionario
+    const mutationDeletePeticionario = useMutation({
+        mutationFn: (id) => 
+            fetch(`http://localhost:8081/api/peticionarios/${id}`, {
+                method: 'DELETE',
+            }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['peticionarios'] });
+            toast.success('Peticionario eliminado correctamente', {
+                style: {
+                    background: '#4CAF50',
+                    color: 'white',
+                    fontWeight: 'bold'
+                }
+            });
+            setIsDeleteModalOpen(false);
+            setPeticionarioToDelete(null);
+        },
+        onError: (error) => {
+            toast.error('Error al eliminar el peticionario: ' + error.message, {
+                style: {
+                    background: '#F44336',
+                    color: 'white',
+                    fontWeight: 'bold'
+                }
+            });
+        },
+    });
 
-    useEffect(() => {
-        fetchPeticionarios();
-        fetchEmpresas();
-    }, []);
+    // Mutation for adding empresa
+    const mutationAddEmpresa = useMutation({
+        mutationFn: (empresaData) => 
+            fetch('http://localhost:8081/api/empresas', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(empresaData),
+            }),
+        onSuccess: (response) => {
+            const newEmpresa = response.json();
+            queryClient.setQueryData(['empresas'], old => [...old, newEmpresa]);
+            toast.success('Empresa añadida correctamente', {
+                style: {
+                    background: '#4CAF50',
+                    color: 'white',
+                    fontWeight: 'bold'
+                }
+            });
+            setIsEmpresaModalOpen(false);
+            mutationPeticionario.mutate({ ...currentPeticionario, representa: newEmpresa });
+        },
+        onError: (error) => {
+            toast.error('Error al añadir la empresa: ' + error.message, {
+                style: {
+                    background: '#F44336',
+                    color: 'white',
+                    fontWeight: 'bold'
+                }
+            });
+        },
+    });
 
-    // Function to open modal for adding a new peticionario
     const openAddModal = () => {
         setCurrentPeticionario(null);
         setIsModalOpen(true);
     };
 
-    // Function to open modal for editing a peticionario
     const openEditModal = (peticionario) => {
-        const peticionarioConEmpresa = {
+        // Si 'representa' solo contiene el ID, busca la empresa correspondiente
+        let representa = null;
+        if (peticionario.representa) {
+            const empresa = empresas && empresas.find(e => e.id === peticionario.representa);
+            representa = empresa ? {
+                id: empresa.id,
+                name: empresa.name,
+                cif: empresa.cif
+            } : null;
+        }
+        setCurrentPeticionario({
             ...peticionario,
-            representa: peticionario.representa
-                ? { ...peticionario.representa, nif: peticionario.representa.nif }
-                : null,
-        };
-        setCurrentPeticionario(peticionarioConEmpresa);
+            representa: representa
+        });
         setIsModalOpen(true);
     };
 
-    // Function to add or update a peticionario
-    const addOrUpdatePeticionario = async (peticionarioData) => {
-        try {
-            // Verificar si hay un nombre de representante
-            if (peticionarioData.representa && peticionarioData.representa.name) {
-                // Aquí abres el ModalEmpresas si hay un nombre de representante
-                setCurrentEmpresa(peticionarioData.representa);
-                setIsEmpresaModalOpen(true);
-                return; // Salimos de la función para no continuar
+
+    const addOrUpdatePeticionario = (peticionarioData) => {
+        if (peticionarioData.representa && peticionarioData.representa.id) {
+            // Si estamos representando una empresa, buscamos la empresa por su ID
+            const empresa = empresas.find(e => e.id === peticionarioData.representa.id);
+            if (empresa) {
+                peticionarioData.representa = {
+                    id: empresa.id
+                };
             }
-            console.log(peticionarioData);
-            const response = peticionarioData.id
-                ? await fetch(`http://localhost:8081/api/peticionarios/${peticionarioData.id}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(peticionarioData),
-                })
-                : await fetch('http://localhost:8081/api/peticionarios', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(peticionarioData),
-                });
-    
-            if (!response.ok) {
-                throw new Error('Error al guardar el peticionario');
-            }
-    
-            fetchPeticionarios(); // Refrescar la lista
-            setIsModalOpen(false); // Cerrar el modal después de añadir/actualizar
-        } catch (error) {
-            console.error('Error al guardar el peticionario:', error);
         }
+        mutationPeticionario.mutate(peticionarioData);
     };
 
-    // Open the delete confirmation modal
     const openDeleteModal = (id) => {
         setPeticionarioToDelete(id);
         setIsDeleteModalOpen(true);
     };
 
-    // Function to confirm deletion
-    const confirmDelete = async () => {
+    const confirmDelete = () => {
         if (peticionarioToDelete) {
-            try {
-                const response = await fetch(`http://localhost:8081/api/peticionarios/${peticionarioToDelete}`, {
-                    method: 'DELETE',
-                });
-                if (!response.ok) {
-                    throw new Error('Error al eliminar el peticionario');
-                }
-                fetchPeticionarios(); // Refresh the list
-                setIsDeleteModalOpen(false); // Close the modal after deleting
-                setPeticionarioToDelete(null); // Clear the selected peticionario to delete
-            } catch (error) {
-                console.error('Error al eliminar el peticionario:', error);
-            }
+            mutationDeletePeticionario.mutate(peticionarioToDelete);
         }
     };
 
-    const filteredPeticionariosDNI = peticionarios
-        .filter(p => p.dni && (
-            p.dni.includes(searchTerm) ||
-            (p.name && p.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (p.surname && p.surname.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (p.tlf && p.tlf.includes(searchTerm)) ||
-            (p.email && p.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (p.address && p.address.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (p.representa && (
-                p.representa.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                p.representa.cif.toLowerCase().includes(searchTerm.toLowerCase())
-            ))
-        ));
+    const filteredPeticionariosDNI = Array.isArray(peticionarios) ? peticionarios.filter(p => p.dni && (
+        p.dni.includes(searchTerm) ||
+        (p.name && p.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (p.surname && p.surname.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (p.tlf && p.tlf.includes(searchTerm)) ||
+        (p.email && p.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (p.address && p.address.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (p.representa && (
+            p.representa.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            p.representa.cif.toLowerCase().includes(searchTerm.toLowerCase())
+        ))
+    )) : [];
 
-    const filteredPeticionariosNIF = peticionarios
-        .filter(p => p.nif && (
-            p.nif.includes(searchTerm) ||
-            (p.name && p.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (p.surname && p.surname.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (p.tlf && p.tlf.includes(searchTerm)) ||
-            (p.email && p.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (p.address && p.address.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (p.representa && (
-                p.representa.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                p.representa.cif.toLowerCase().includes(searchTerm.toLowerCase())
-            ))
-        ));
+    const filteredPeticionariosNIF = Array.isArray(peticionarios) ? peticionarios.filter(p => p.nif && (
+        p.nif.includes(searchTerm) ||
+        (p.name && p.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (p.surname && p.surname.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (p.tlf && p.tlf.includes(searchTerm)) ||
+        (p.email && p.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (p.address && p.address.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (p.representa && (
+            p.representa.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            p.representa.cif.toLowerCase().includes(searchTerm.toLowerCase())
+        ))
+    )) : [];
 
     const currentItemsDNI = filteredPeticionariosDNI.slice(
         (currentPageDNI - 1) * itemsPerPage, currentPageDNI * itemsPerPage
@@ -217,8 +273,11 @@ const MainPeticionarios = ({ className }) => {
         }
     };
 
+    if (loadingPeticionarios || loadingEmpresas) return <div>Cargando peticionarios y empresas...</div>;
+    if (errorPeticionarios || errorEmpresas) return <div>Error al cargar datos: {errorPeticionarios?.message || errorEmpresas?.message}</div>;
     return (
         <div id="MainPeticionarios" className={className}>
+            <Toaster />
             <div id="Encabezado">
                 <h2>PETICIONARIOS</h2>
                 <div id="filtroContainer">
@@ -267,7 +326,10 @@ const MainPeticionarios = ({ className }) => {
                                                             <button className="btn-delete" onClick={() => openDeleteModal(peticionario.id)}>Eliminar</button>
                                                         </>
                                                     ) : column.id === 'representa' ? (
-                                                        peticionario.representa ? peticionario.representa.name : ''
+                                                        // Si 'representa' solo tiene ID, buscamos la empresa aquí
+                                                        peticionario.representaId ? 
+                                                            ((empresas && empresas.find(e => e.id === peticionario.representaId)?.name) || 'Empresa no encontrada') 
+                                                        : ''
                                                     ) : (
                                                         peticionario[column.id]
                                                     )}
@@ -321,7 +383,8 @@ const MainPeticionarios = ({ className }) => {
                                                             <button className="btn-delete" onClick={() => openDeleteModal(peticionario.id)}>Eliminar</button>
                                                         </>
                                                     ) : column.id === 'representa' ? (
-                                                        peticionario.representa ? peticionario.representa.name : ''
+                                                        peticionario.representaId ? 
+                                                        ((empresas && empresas.find(e => e.id === peticionario.representaId)?.name) || 'Empresa no encontrada') : ''
                                                     ) : (
                                                         peticionario[column.id]
                                                     )}
@@ -340,7 +403,7 @@ const MainPeticionarios = ({ className }) => {
                             </div>
                         </div>
                     </div>
-                </SortableContext>
+                    </SortableContext>
             </DndContext>
 
             {isModalOpen && (
@@ -350,6 +413,7 @@ const MainPeticionarios = ({ className }) => {
                     onAdd={addOrUpdatePeticionario}
                     onUpdate={addOrUpdatePeticionario}
                     peticionario={currentPeticionario}
+                    empresas={empresas}
                 />
             )}
 
@@ -357,26 +421,7 @@ const MainPeticionarios = ({ className }) => {
                 <ModalEmpresas
                     isOpen={isEmpresaModalOpen}
                     onClose={() => setIsEmpresaModalOpen(false)}
-                    onAddOrUpdate={async (empresaData) => {
-                        try {
-                            const response = await fetch('http://localhost:8081/api/empresas', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                },
-                                body: JSON.stringify(empresaData),
-                            });
-                            const newEmpresa = await response.json();
-                            setEmpresas([...empresas, newEmpresa]);
-                            setIsEmpresaModalOpen(false);
-                            addOrUpdatePeticionario({
-                                ...currentPeticionario,
-                                representa: newEmpresa
-                            });
-                        } catch (error) {
-                            console.error('Error al agregar la empresa:', error);
-                        }
-                    }}
+                    onAddOrUpdate={(empresaData) => mutationAddEmpresa.mutate(empresaData)}
                     empresa={currentEmpresa}
                 />
             )}

@@ -1,54 +1,121 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import '../css/MainEstadosExpedientes.css';
 import busqueda from '../img/busqueda.png';
 import ModalEstadosExpedientes from './ModalEstadosExpedientes';
-import ModalGenerico from './ModalGenerico'; // Importar el modal genérico
+import ModalGenerico from './ModalGenerico';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { fetchEstadosExpedientes } from '../api/apiService'; // Asegúrate de que la ruta es correcta
+import { Toaster, toast } from 'sonner';
 
 const MainEstadosExpedientes = ({ className }) => {
     const [filtroExpanded, setFiltroExpanded] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isModalConfirmacionOpen, setIsModalConfirmacionOpen] = useState(false);
-    const [estadosExpedientes, setEstadosExpedientes] = useState([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage] = useState(9);
     const [selectedEstadosExpedientes, setSelectedEstadosExpedientes] = useState(null);
     const [estadoToDelete, setEstadoToDelete] = useState(null);
-    const [searchTerm, setSearchTerm] = useState(''); // Estado para el término de búsqueda
+    const [searchTerm, setSearchTerm] = useState('');
+    const queryClient = useQueryClient();
 
-    const toggleFiltro = () => {
-        setFiltroExpanded(!filtroExpanded);
-    };
+    const { data: estadosExpedientes, isLoading, isError, error } = useQuery({
+        queryKey: ['estadosExpedientes'],
+        queryFn: fetchEstadosExpedientes
+    });
 
-    const fetchEstadosExpedientes = async () => {
-        try {
-            const response = await fetch('http://localhost:8081/api/estadosexpedientes');
-            if (!response.ok) {
-                throw new Error('Error al obtener los estados de expedientes');
-            }
-            const data = await response.json();
-            setEstadosExpedientes(data);
-        } catch (error) {
-            console.error(error);
-        }
-    };
-
-    const handleAdd = async (newEstado) => {
-        try {
-            const response = await fetch('http://localhost:8081/api/estadosexpedientes', {
+    const mutationAdd = useMutation({
+        mutationFn: (newEstado) =>
+            fetch('http://localhost:8081/api/estadosexpedientes', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(newEstado),
+            }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['estadosExpedientes'] });
+            toast.success('Estado de expediente añadido correctamente', {
+                style: {
+                    background: '#4CAF50',
+                    color: 'white',
+                    fontWeight: 'bold'
+                }
             });
-            if (!response.ok) {
-                throw new Error('Error al añadir el estado de expediente');
-            }
-            fetchEstadosExpedientes();
-            setIsModalOpen(false);
-        } catch (error) {
-            console.error(error);
-        }
+        },
+        onError: (error) => {
+            toast.error('Error al añadir el estado de expediente: ' + error.message, {
+                style: {
+                    background: '#F44336',
+                    color: 'white',
+                    fontWeight: 'bold'
+                }
+            });
+        },
+    });
+
+    const mutationUpdate = useMutation({
+        mutationFn: (updatedEstado) =>
+            fetch(`http://localhost:8081/api/estadosexpedientes/${updatedEstado.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(updatedEstado),
+            }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['estadosExpedientes'] });
+            toast.success('Estado de expediente actualizado correctamente', {
+                style: {
+                    background: '#4CAF50',
+                    color: 'white',
+                    fontWeight: 'bold'
+                }
+            });
+        },
+        onError: (error) => {
+            toast.error('Error al actualizar el estado de expediente: ' + error.message, {
+                style: {
+                    background: '#F44336',
+                    color: 'white',
+                    fontWeight: 'bold'
+                }
+            });
+        },
+    });
+
+    const mutationDelete = useMutation({
+        mutationFn: (id) =>
+            fetch(`http://localhost:8081/api/estadosexpedientes/${id}`, {
+                method: 'DELETE',
+            }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['estadosExpedientes'] });
+            toast.success('Estado de expediente eliminado correctamente', {
+                style: {
+                    background: '#4CAF50',
+                    color: 'white',
+                    fontWeight: 'bold'
+                }
+            });
+        },
+        onError: (error) => {
+            toast.error('Error al eliminar el estado de expediente: ' + error.message, {
+                style: {
+                    background: '#F44336',
+                    color: 'white',
+                    fontWeight: 'bold'
+                }
+            });
+        },
+    });
+
+    const toggleFiltro = () => {
+        setFiltroExpanded(!filtroExpanded);
+    };
+
+    const handleAdd = (newEstado) => {
+        mutationAdd.mutate(newEstado);
+        setIsModalOpen(false);
     };
 
     const handleEdit = (estadosExpedientes) => {
@@ -56,41 +123,17 @@ const MainEstadosExpedientes = ({ className }) => {
         setIsModalOpen(true);
     };
 
-    const handleUpdate = async (updatedEstado) => {
-        try {
-            const response = await fetch(`http://localhost:8081/api/estadosexpedientes/${updatedEstado.id}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(updatedEstado),
-            });
-            if (!response.ok) {
-                throw new Error('Error al actualizar el estado de expediente');
-            }
-            fetchEstadosExpedientes();
-            setIsModalOpen(false);
-            setSelectedEstadosExpedientes(null);
-        } catch (error) {
-            console.error(error);
-        }
+    const handleUpdate = (updatedEstado) => {
+        mutationUpdate.mutate(updatedEstado);
+        setIsModalOpen(false);
+        setSelectedEstadosExpedientes(null);
     };
 
-    const handleDelete = async () => {
+    const handleDelete = () => {
         if (estadoToDelete) {
-            try {
-                const response = await fetch(`http://localhost:8081/api/estadosexpedientes/${estadoToDelete}`, {
-                    method: 'DELETE',
-                });
-                if (!response.ok) {
-                    throw new Error('Error al eliminar el estado de expediente');
-                }
-                fetchEstadosExpedientes();
-                setEstadoToDelete(null);
-                setIsModalConfirmacionOpen(false);
-            } catch (error) {
-                console.error(error);
-            }
+            mutationDelete.mutate(estadoToDelete);
+            setEstadoToDelete(null);
+            setIsModalConfirmacionOpen(false);
         }
     };
 
@@ -99,15 +142,15 @@ const MainEstadosExpedientes = ({ className }) => {
         setIsModalConfirmacionOpen(true);
     };
 
-    useEffect(() => {
-        fetchEstadosExpedientes();
-    }, []);
+    if (isLoading) return <div>Cargando estados de expedientes...</div>;
+    if (isError) return <div>Error: {error.message}</div>;
 
     const indexOfLastItem = currentPage * itemsPerPage;
     const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-    const filteredEstadosExpedientes = estadosExpedientes.filter(estadosExpedientes =>
-        estadosExpedientes.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredEstadosExpedientes = Array.isArray(estadosExpedientes) ? estadosExpedientes.filter(estado =>
+        estado.name.toLowerCase().includes(searchTerm.toLowerCase())
+    ) : [];
+
     const currentItems = filteredEstadosExpedientes.slice(indexOfFirstItem, indexOfLastItem);
     const totalPages = Math.ceil(filteredEstadosExpedientes.length / itemsPerPage);
 
@@ -117,6 +160,7 @@ const MainEstadosExpedientes = ({ className }) => {
 
     return (
         <div id="MainEstadosExpedientes" className={className}>
+            <Toaster />
             <div id="Encabezado">
                 <div id="EncabezadoTabla">
                     <h2>ESTADOS DE EXPEDIENTES</h2>
@@ -129,7 +173,7 @@ const MainEstadosExpedientes = ({ className }) => {
                             onBlur={toggleFiltro}
                             placeholder="Buscar..."
                             value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)} // Actualizar el término de búsqueda
+                            onChange={(e) => setSearchTerm(e.target.value)}
                         />
                         <img src={busqueda} alt="Buscar" id="lupa" />
                     </div>
@@ -144,12 +188,12 @@ const MainEstadosExpedientes = ({ className }) => {
                         </tr>
                     </thead>
                     <tbody>
-                        {currentItems.map((estadosExpedientes) => (
-                            <tr key={estadosExpedientes.id}>
-                                <td>{estadosExpedientes.name}</td>
+                        {currentItems.map((estado) => (
+                            <tr key={estado.id}>
+                                <td>{estado.name}</td>
                                 <td>
-                                    <button onClick={() => handleEdit(estadosExpedientes)}>Modificar</button>
-                                    <button className="btn-delete" onClick={() => openDeleteModal(estadosExpedientes.id)}>Eliminar</button>
+                                    <button onClick={() => handleEdit(estado)}>Modificar</button>
+                                    <button className="btn-delete" onClick={() => openDeleteModal(estado.id)}>Eliminar</button>
                                 </td>
                             </tr>
                         ))}
@@ -158,29 +202,30 @@ const MainEstadosExpedientes = ({ className }) => {
                 <div id="Paginacion">
                     <span>Página {currentPage} de {totalPages}</span>
                     <div id="Botones">
-                        <button 
-                            disabled={currentPage === 1} 
+                        <button
+                            disabled={currentPage === 1}
                             onClick={() => handlePageChange(currentPage - 1)}>Anterior</button>
-                        <button 
-                            disabled={currentPage === totalPages} 
+                        <button
+                            disabled={currentPage === totalPages}
                             onClick={() => handlePageChange(currentPage + 1)}>Siguiente</button>
                     </div>
                 </div>
                 <div id="Botones">
                     <button onClick={() => setIsModalOpen(true)}>Añadir Nuevo</button>
-                    <ModalEstadosExpedientes 
-                        isOpen={isModalOpen} 
-                        onClose={() => {setIsModalOpen(false); setSelectedEstadosExpedientes(null);}} 
-                        onAdd={handleAdd} 
-                        onUpdate={handleUpdate} 
-                        estadosExpedientes={selectedEstadosExpedientes} 
+                    <button onClick={() => queryClient.invalidateQueries({ queryKey: ['estadosExpedientes'] })}>Refrescar Datos</button>
+                    <ModalEstadosExpedientes
+                        isOpen={isModalOpen}
+                        onClose={() => { setIsModalOpen(false); setSelectedEstadosExpedientes(null); }}
+                        onAdd={handleAdd}
+                        onUpdate={handleUpdate}
+                        estadosExpedientes={selectedEstadosExpedientes}
                     />
-                    <ModalGenerico 
-                        isOpen={isModalConfirmacionOpen} 
-                        title="Confirmar Eliminación" 
-                        message="¿Estás seguro de que deseas eliminar este estado?" 
-                        onClose={() => {setIsModalConfirmacionOpen(false); setSelectedEstadosExpedientes(null);}} 
-                        onConfirm={handleDelete} 
+                    <ModalGenerico
+                        isOpen={isModalConfirmacionOpen}
+                        title="Confirmar Eliminación"
+                        message="¿Estás seguro de que deseas eliminar este estado?"
+                        onClose={() => { setIsModalConfirmacionOpen(false); setEstadoToDelete(null); }}
+                        onConfirm={handleDelete}
                     />
                 </div>
             </div>

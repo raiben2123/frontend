@@ -1,54 +1,122 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import '../css/MainEstadosExpedientes.css';
 import busqueda from '../img/busqueda.png';
 import ModalDepartamentos from './ModalDepartamentos';
-import ModalGenerico from './ModalGenerico'; // Importar el modal genérico
+import ModalGenerico from './ModalGenerico';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { fetchDepartamentos } from '../api/apiService'; // Asegúrate de que la ruta es correcta
+import { Toaster, toast } from 'sonner';
 
 const MainDepartamentos = ({ className }) => {
     const [filtroExpanded, setFiltroExpanded] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isModalConfirmacionOpen, setIsModalConfirmacionOpen] = useState(false);
-    const [departamentos, setDepartamentos] = useState([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage] = useState(9);
     const [selectedDepartamento, setSelectedDepartamento] = useState(null);
     const [departamentoToDelete, setDepartamentoToDelete] = useState(null);
-    const [searchTerm, setSearchTerm] = useState(''); // Estado para el término de búsqueda
+    const [searchTerm, setSearchTerm] = useState('');
 
-    const toggleFiltro = () => {
-        setFiltroExpanded(!filtroExpanded);
-    };
+    const queryClient = useQueryClient();
 
-    const fetchDepartamentos = async () => {
-        try {
-            const response = await fetch('http://localhost:8081/api/departamentos');
-            if (!response.ok) {
-                throw new Error('Error al obtener los departamentos');
-            }
-            const data = await response.json();
-            setDepartamentos(data);
-        } catch (error) {
-            console.error(error);
-        }
-    };
+    const { data: departamentos, isLoading, isError, error } = useQuery({
+        queryKey: ['departamentos'],
+        queryFn: fetchDepartamentos
+    });
 
-    const handleAdd = async (newDepartamento) => {
-        try {
-            const response = await fetch('http://localhost:8081/api/departamentos', {
+    const mutationAdd = useMutation({
+        mutationFn: (newDepartamento) => 
+            fetch('http://localhost:8081/api/departamentos', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(newDepartamento),
+            }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['departamentos'] });
+            toast.success('Departamento añadido correctamente', {
+                style: {
+                    background: '#4CAF50',
+                    color: 'white',
+                    fontWeight: 'bold'
+                }
             });
-            if (!response.ok) {
-                throw new Error('Error al añadir el departamento');
-            }
-            fetchDepartamentos();
-            setIsModalOpen(false);
-        } catch (error) {
-            console.error(error);
-        }
+        },
+        onError: (error) => {
+            toast.error('Error al añadir el departamento: ' + error.message, {
+                style: {
+                    background: '#F44336',
+                    color: 'white',
+                    fontWeight: 'bold'
+                }
+            });
+        },
+    });
+
+    const mutationUpdate = useMutation({
+        mutationFn: (updatedDepartamento) => 
+            fetch(`http://localhost:8081/api/departamentos/${updatedDepartamento.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(updatedDepartamento),
+            }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['departamentos'] });
+            toast.success('Departamento actualizado correctamente', {
+                style: {
+                    background: '#4CAF50',
+                    color: 'white',
+                    fontWeight: 'bold'
+                }
+            });
+        },
+        onError: (error) => {
+            toast.error('Error al actualizar el departamento: ' + error.message, {
+                style: {
+                    background: '#F44336',
+                    color: 'white',
+                    fontWeight: 'bold'
+                }
+            });
+        },
+    });
+
+    const mutationDelete = useMutation({
+        mutationFn: (id) => 
+            fetch(`http://localhost:8081/api/departamentos/${id}`, {
+                method: 'DELETE',
+            }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['departamentos'] });
+            toast.success('Departamento eliminado correctamente', {
+                style: {
+                    background: '#4CAF50',
+                    color: 'white',
+                    fontWeight: 'bold'
+                }
+            });
+        },
+        onError: (error) => {
+            toast.error('Error al eliminar el departamento: ' + error.message, {
+                style: {
+                    background: '#F44336',
+                    color: 'white',
+                    fontWeight: 'bold'
+                }
+            });
+        },
+    });
+
+    const toggleFiltro = () => {
+        setFiltroExpanded(!filtroExpanded);
+    };
+
+    const handleAdd = (newDepartamento) => {
+        mutationAdd.mutate(newDepartamento);
+        setIsModalOpen(false);
     };
 
     const handleEdit = (departamento) => {
@@ -56,41 +124,17 @@ const MainDepartamentos = ({ className }) => {
         setIsModalOpen(true);
     };
 
-    const handleUpdate = async (updatedDepartamento) => {
-        try {
-            const response = await fetch(`http://localhost:8081/api/departamentos/${updatedDepartamento.id}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(updatedDepartamento),
-            });
-            if (!response.ok) {
-                throw new Error('Error al actualizar el departamento');
-            }
-            fetchDepartamentos();
-            setIsModalOpen(false);
-            setSelectedDepartamento(null);
-        } catch (error) {
-            console.error(error);
-        }
+    const handleUpdate = (updatedDepartamento) => {
+        mutationUpdate.mutate(updatedDepartamento);
+        setIsModalOpen(false);
+        setSelectedDepartamento(null);
     };
 
-    const handleDelete = async () => {
+    const handleDelete = () => {
         if (departamentoToDelete) {
-            try {
-                const response = await fetch(`http://localhost:8081/api/departamentos/${departamentoToDelete}`, {
-                    method: 'DELETE',
-                });
-                if (!response.ok) {
-                    throw new Error('Error al eliminar el departamento');
-                }
-                fetchDepartamentos();
-                setDepartamentoToDelete(null);
-                setIsModalConfirmacionOpen(false);
-            } catch (error) {
-                console.error(error);
-            }
+            mutationDelete.mutate(departamentoToDelete);
+            setDepartamentoToDelete(null);
+            setIsModalConfirmacionOpen(false);
         }
     };
 
@@ -99,15 +143,15 @@ const MainDepartamentos = ({ className }) => {
         setIsModalConfirmacionOpen(true);
     };
 
-    useEffect(() => {
-        fetchDepartamentos();
-    }, []);
+    if (isLoading) return <div>Cargando departamentos...</div>;
+    if (isError) return <div>Error: {error.message}</div>;
 
     const indexOfLastItem = currentPage * itemsPerPage;
     const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-    const filteredDepartamentos = departamentos.filter(departamento =>
+    const filteredDepartamentos = Array.isArray(departamentos) ? departamentos.filter(departamento =>
         departamento.name && departamento.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );    
+    ) : [];
+
     const currentItems = filteredDepartamentos.slice(indexOfFirstItem, indexOfLastItem);
     const totalPages = Math.ceil(filteredDepartamentos.length / itemsPerPage);
 
@@ -117,6 +161,7 @@ const MainDepartamentos = ({ className }) => {
 
     return (
         <div id="MainDepartamentos" className={className}>
+            <Toaster />
             <div id="Encabezado">
                 <div id="EncabezadoTabla">
                     <h2>DEPARTAMENTOS</h2>
@@ -129,7 +174,7 @@ const MainDepartamentos = ({ className }) => {
                             onBlur={toggleFiltro}
                             placeholder="Buscar..."
                             value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)} // Actualizar el término de búsqueda
+                            onChange={(e) => setSearchTerm(e.target.value)}
                         />
                         <img src={busqueda} alt="Buscar" id="lupa" />
                     </div>
@@ -158,32 +203,33 @@ const MainDepartamentos = ({ className }) => {
                 <div id="Paginacion">
                     <span>Página {currentPage} de {totalPages}</span>
                     <div id="Botones">
-                        <button
-                            disabled={currentPage === 1}
+                        <button 
+                            disabled={currentPage === 1} 
                             onClick={() => handlePageChange(currentPage - 1)}>Anterior</button>
-                        <button
-                            disabled={currentPage === totalPages}
+                        <button 
+                            disabled={currentPage === totalPages} 
                             onClick={() => handlePageChange(currentPage + 1)}>Siguiente</button>
                     </div>
                 </div>
                 <div id="Botones">
                     <button onClick={() => setIsModalOpen(true)}>Añadir Nuevo</button>
-                    <ModalDepartamentos
-                        isOpen={isModalOpen}
-                        onClose={() => {setIsModalOpen(false); setSelectedDepartamento(null);}}
-                        onAdd={handleAdd}
-                        onUpdate={handleUpdate}
+                    <button onClick={() => queryClient.invalidateQueries({ queryKey: ['departamentos'] })}>Refrescar Datos</button>
+                    <ModalDepartamentos 
+                        isOpen={isModalOpen} 
+                        onClose={() => {setIsModalOpen(false); setSelectedDepartamento(null);}} 
+                        onAdd={handleAdd} 
+                        onUpdate={handleUpdate} 
                         departamento={selectedDepartamento}
                     />
-                    <ModalGenerico
-                        isOpen={isModalConfirmacionOpen}
-                        title="Confirmar Eliminación"
-                        message="¿Estás seguro de que deseas eliminar este departamento?"
+                    <ModalGenerico 
+                        isOpen={isModalConfirmacionOpen} 
+                        title="Confirmar Eliminación" 
+                        message="¿Estás seguro de que deseas eliminar este departamento?" 
                         onClose={() => {
-                            setIsModalConfirmacionOpen(false);
-                            setSelectedDepartamento(null);
-                        }}
-                        onConfirm={handleDelete}
+                            setIsModalConfirmacionOpen(false); 
+                            setDepartamentoToDelete(null);
+                        }} 
+                        onConfirm={handleDelete} 
                     />
                 </div>
             </div>

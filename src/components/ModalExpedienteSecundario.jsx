@@ -3,7 +3,7 @@ import Select from 'react-select';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 
-const ModalExpediente = ({ isOpen, onClose, onSave, estados, departamentos, clasificaciones, peticionarios, empresas, expediente }) => {
+const ModalExpedienteSecundario = ({ isOpen, onClose, onSave, estados, departamentos, clasificaciones, peticionarios, empresas, expedientesPrincipales, expediente }) => {
     const [formData, setFormData] = useState({
         expediente: '',
         solicitud: '',
@@ -17,14 +17,13 @@ const ModalExpediente = ({ isOpen, onClose, onSave, estados, departamentos, clas
         peticionarioId: null,
         empresaId: null,
         fechaInicio: new Date(),
-        expedienteSecundarioIds: []
+        expedientePrincipalId: null
     });
 
     const [isPeticionarioSelected, setIsPeticionarioSelected] = useState(true);
 
     useEffect(() => {
         if (expediente && expediente.id > 0) {
-            // When modifying, set the form data from the existing expediente
             setFormData(prevFormData => ({
                 ...prevFormData,
                 ...expediente,
@@ -34,15 +33,15 @@ const ModalExpediente = ({ isOpen, onClose, onSave, estados, departamentos, clas
                 clasificacionId: expediente.clasificacionId || (expediente.clasificacion ? expediente.clasificacion.id : null),
                 peticionarioId: expediente.peticionarioId || null,
                 empresaId: expediente.empresaId || null,
-                fechaInicio: expediente.fechaInicio ? new Date(expediente.fechaInicio) : new Date()
+                fechaInicio: expediente.fechaInicio ? new Date(expediente.fechaInicio) : new Date(),
+                expedientePrincipalId: expediente.expedientePrincipalId || null
             }));
             setIsPeticionarioSelected(expediente.peticionarioId !== null);
         } else {
-            // When adding new, reset the form
             resetForm();
             setIsPeticionarioSelected(true);
         }
-    }, [expediente, isOpen]); // This ensures reset happens when modal opens for new items
+    }, [expediente, isOpen]);
 
     const resetForm = () => {
         setFormData({
@@ -58,7 +57,7 @@ const ModalExpediente = ({ isOpen, onClose, onSave, estados, departamentos, clas
             peticionarioId: null,
             empresaId: null,
             fechaInicio: new Date(),
-            expedienteSecundarioIds: []
+            expedientePrincipalId: null
         });
     };
 
@@ -95,7 +94,7 @@ const ModalExpediente = ({ isOpen, onClose, onSave, estados, departamentos, clas
             clasificacionId: formData.clasificacionId,
             peticionarioId: isPeticionarioSelected ? formData.peticionarioId : null,
             empresaId: !isPeticionarioSelected ? formData.empresaId : null,
-            expedienteSecundarioIds: []
+            expedientePrincipalId: formData.expedientePrincipalId
         };
 
         if (!expediente || !expediente.id) {
@@ -103,7 +102,6 @@ const ModalExpediente = ({ isOpen, onClose, onSave, estados, departamentos, clas
         }
 
         onSave(dataToSend);
-        resetForm();
     };
 
     if (!isOpen) return null;
@@ -111,7 +109,7 @@ const ModalExpediente = ({ isOpen, onClose, onSave, estados, departamentos, clas
         <div className="modal">
             <div className="modal-content">
                 <span className="close" onClick={onClose}>×</span>
-                <h2>{expediente && expediente.id ? 'Modificar Expediente' : 'Añadir Nuevo Expediente'}</h2>
+                <h2>{expediente && expediente.id ? 'Modificar Expediente Secundario' : 'Añadir Nuevo Expediente Secundario'}</h2>
                 <form>
                     <label>
                         Expediente:
@@ -187,7 +185,7 @@ const ModalExpediente = ({ isOpen, onClose, onSave, estados, departamentos, clas
                             Peticionario:
                             <Select
                                 name="peticionario"
-                                options={peticionarios.map(p => ({ id: p.id, label: `${p.name} ${p.surname || ''} - ${p.dni || p.cif}` }))}
+                                options={peticionarios.map(p => ({ id: p.id, label: `${p.name} ${p.surname || ''} - ${p.dni || ''}` }))}
                                 value={peticionarios.find(p => p.id === formData.peticionarioId)}
                                 onChange={(option) => handleSelectChange(option, { name: 'peticionarioId' })}
                             />
@@ -207,6 +205,15 @@ const ModalExpediente = ({ isOpen, onClose, onSave, estados, departamentos, clas
                         Fecha de Inicio:
                         <DatePicker selected={formData.fechaInicio} onChange={(date) => handleDateChange(date, 'fechaInicio')} />
                     </label>
+                    <label>
+                        Expediente Principal:
+                        <Select
+                            name="expedientePrincipal"
+                            options={expedientesPrincipales.map(ep => ({ id: ep.id, label: ep.expediente }))}
+                            value={expedientesPrincipales.find(ep => ep.id === formData.expedientePrincipalId)}
+                            onChange={(option) => handleSelectChange(option, { name: 'expedientePrincipalId' })}
+                        />
+                    </label>
                     <button type="button" onClick={handleSubmit}>Guardar</button>
                 </form>
             </div>
@@ -214,4 +221,4 @@ const ModalExpediente = ({ isOpen, onClose, onSave, estados, departamentos, clas
     );
 };
 
-export default ModalExpediente;
+export default ModalExpedienteSecundario;

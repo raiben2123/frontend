@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import '../css/ModalPeticionarios.css';
 
-const ModalEmpresas = ({ isOpen, onClose, onAddOrUpdate, empresa, peticionario, actualizarPeticionario }) => {
+const ModalEmpresas = ({ isOpen, onClose, onAddOrUpdate, empresa }) => {
     const [formData, setFormData] = useState({
         cif: '',
         name: '',
         address: '',
         tlf: '',
-        email: ''
+        email: '',
+        id: null
     });
 
+    // Use effect to set form data when empresa changes or when adding a new empresa
     useEffect(() => {
         if (empresa) {
             setFormData({
@@ -17,8 +19,12 @@ const ModalEmpresas = ({ isOpen, onClose, onAddOrUpdate, empresa, peticionario, 
                 name: empresa.name || '',
                 address: empresa.address || '',
                 tlf: empresa.tlf || '',
-                email: empresa.email || ''
+                email: empresa.email || '',
+                id: empresa.id || null
             });
+        } else {
+            // Reset the form when we are adding a new empresa
+            resetForm();
         }
     }, [empresa]);
 
@@ -43,8 +49,7 @@ const ModalEmpresas = ({ isOpen, onClose, onAddOrUpdate, empresa, peticionario, 
         setError(null);
 
         try {
-            const newEmpresa = await onAddOrUpdate(formData);
-            actualizarPeticionario(peticionario, newEmpresa);
+            await onAddOrUpdate(formData);
             onClose();
         } catch (error) {
             setError('Error al guardar la empresa');
@@ -53,12 +58,24 @@ const ModalEmpresas = ({ isOpen, onClose, onAddOrUpdate, empresa, peticionario, 
         }
     };
 
+    // Function to reset form data
+    const resetForm = () => {
+        setFormData({
+            cif: '',
+            name: '',
+            address: '',
+            tlf: '',
+            email: '',
+            id: null
+        });
+    };
+
     if (!isOpen) return null;
 
     return (
         <div className="modal">
             <div className="modal-content">
-                <span className="close" onClick={onClose}>&times;</span>
+                <span className="close" onClick={onClose}>×</span>
                 <h2>{empresa ? 'Modificar Empresa' : 'Añadir Nueva Empresa'}</h2>
                 {error && <p className="error">{error}</p>}
                 <form>

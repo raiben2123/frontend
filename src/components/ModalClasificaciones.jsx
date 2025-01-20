@@ -32,6 +32,7 @@ const ModalClasificaciones = ({ isOpen, onClose, onAdd, onUpdate, clasificacion 
             onUpdate(formData);
         } else {
             onAdd(formData);
+            setFormData({ name: '', acronym: '' });
         }
     };
 

@@ -1,12 +1,13 @@
-import React, { useContext, useState } from "react";
+import React, { useState } from "react";
 import '../css/MainClasificaciones.css';
 import busqueda from '../img/busqueda.png';
 import ModalClasificaciones from './ModalClasificaciones';
 import ModalGenerico from './ModalGenerico';
-import { ClasificacionesContext } from '../contexts/ClasificacionesContext';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { fetchClasificaciones } from '../api/apiService'; // Asegúrate de que la ruta es correcta
+import { Toaster, toast } from 'sonner';
 
 const MainClasificaciones = ({ className }) => {
-    const { clasificaciones, refreshClasificaciones, loading } = useContext(ClasificacionesContext);
     const [filtroExpanded, setFiltroExpanded] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isModalConfirmacionOpen, setIsModalConfirmacionOpen] = useState(false);
@@ -16,71 +17,129 @@ const MainClasificaciones = ({ className }) => {
     const [clasificacionToDelete, setClasificacionToDelete] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
 
-    if (loading) return <div>Cargando clasificaciones...</div>;
+    const queryClient = useQueryClient();
 
-    const toggleFiltro = () => {
-        setFiltroExpanded(!filtroExpanded);
-    };
+    const { data: clasificaciones, isLoading, isError, error } = useQuery({
+        queryKey: ['clasificaciones'],
+        queryFn: fetchClasificaciones
+    });
 
-    const handleAdd = async (newClasificacion) => {
-        try {
-            const response = await fetch('http://localhost:8081/api/clasificaciones', {
+    const mutationAdd = useMutation({
+        mutationFn: (newClasificacion) =>
+            fetch('http://localhost:8081/api/clasificaciones', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(newClasificacion),
+            }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['clasificaciones'] });
+            toast.success('Clasificación añadida correctamente', {
+                style: {
+                    background: '#4CAF50',
+                    color: 'white',
+                    fontWeight: 'bold'
+                }
             });
-            if (!response.ok) {
-                throw new Error('Error al añadir la clasificación');
-            }
-            refreshClasificaciones();
-            setIsModalOpen(false);
-        } catch (error) {
-            console.error(error);
-        }
-    };
+        },
+        onError: (error) => {
+            toast.error('Error al añadir la clasificación: ' + error.message, {
+                style: {
+                    background: '#F44336',
+                    color: 'white',
+                    fontWeight: 'bold'
+                }
+            });
+        },
+    });
 
-    const handleEdit = (clasificacion) => {
-        setSelectedClasificacion(clasificacion);
-        setIsModalOpen(true);
-    };
-
-    const handleUpdate = async (updatedClasificacion) => {
-        try {
-            const response = await fetch(`http://localhost:8081/api/clasificaciones/${updatedClasificacion.id}`, {
+    const mutationUpdate = useMutation({
+        mutationFn: (updatedClasificacion) =>
+            fetch(`http://localhost:8081/api/clasificaciones/${updatedClasificacion.id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(updatedClasificacion),
+            }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['clasificaciones'] });
+            toast.success('Clasificación actualizada correctamente', {
+                style: {
+                    background: '#4CAF50',
+                    color: 'white',
+                    fontWeight: 'bold'
+                }
             });
-            if (!response.ok) {
-                throw new Error('Error al actualizar la clasificación');
-            }
-            refreshClasificaciones();
-            setIsModalOpen(false);
-            setSelectedClasificacion(null);
-        } catch (error) {
-            console.error(error);
-        }
+        },
+        onError: (error) => {
+            toast.error('Error al actualizar la clasificación: ' + error.message, {
+                style: {
+                    background: '#F44336',
+                    color: 'white',
+                    fontWeight: 'bold'
+                }
+            });
+        },
+    });
+
+    const mutationDelete = useMutation({
+        mutationFn: (id) =>
+            fetch(`http://localhost:8081/api/clasificaciones/${id}`, {
+                method: 'DELETE',
+            }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['clasificaciones'] });
+            toast.success('Clasificación eliminada correctamente', {
+                style: {
+                    background: '#4CAF50',
+                    color: 'white',
+                    fontWeight: 'bold'
+                }
+            });
+        },
+        onError: (error) => {
+            toast.error('Error al eliminar la clasificación: ' + error.message, {
+                style: {
+                    background: '#F44336',
+                    color: 'white',
+                    fontWeight: 'bold'
+                }
+            });
+        },
+    });
+
+    const toggleFiltro = () => {
+        setFiltroExpanded(!filtroExpanded);
     };
 
-    const handleDelete = async () => {
+    const handleAdd = (newClasificacion) => {
+        mutationAdd.mutate(newClasificacion);
+        setIsModalOpen(false);
+    };
+
+    const handleEdit = (clasificacion) => {
+        // Aseguramos que estamos pasando el objeto completo al modal
+        setSelectedClasificacion(clasificacion);
+        setIsModalOpen(true);
+    };
+
+    const handleUpdate = (updatedClasificacion) => {
+        // Aseguramos que estamos enviando el objeto correcto para actualizar
+        mutationUpdate.mutate(updatedClasificacion);
+        setIsModalOpen(false);
+        setSelectedClasificacion(null);
+    };
+
+    const handleDelete = () => {
         if (clasificacionToDelete) {
-            try {
-                const response = await fetch(`http://localhost:8081/api/clasificaciones/${clasificacionToDelete}`, {
-                    method: 'DELETE',
-                });
-                if (!response.ok) {
-                    throw new Error('Error al eliminar la clasificación');
-                }
-                refreshClasificaciones();
-                setClasificacionToDelete(null);
-                setIsModalConfirmacionOpen(false);
-            } catch (error) {
-                console.error(error);
-            }
+            console.log("Deleting classification with ID:", clasificacionToDelete); // Añadir log para depuración
+            mutationDelete.mutate(clasificacionToDelete);
+            setClasificacionToDelete(null); // Limpiamos inmediatamente para evitar múltiples eliminaciones
+            setIsModalConfirmacionOpen(false); // Cerramos el modal de confirmación
+        } else {
+            console.log("No clasification to delete set."); // Log si no hay ID para eliminar
         }
     };
 
@@ -88,6 +147,9 @@ const MainClasificaciones = ({ className }) => {
         setClasificacionToDelete(id);
         setIsModalConfirmacionOpen(true);
     };
+
+    if (isLoading) return <div>Cargando clasificaciones...</div>;
+    if (isError) return <div>Error: {error.message}</div>;
 
     const indexOfLastItem = currentPage * itemsPerPage;
     const indexOfFirstItem = indexOfLastItem - itemsPerPage;
@@ -105,8 +167,10 @@ const MainClasificaciones = ({ className }) => {
     const handlePageChange = (page) => {
         setCurrentPage(page);
     };
+
     return (
         <div id="MainClasificaciones" className={className}>
+            <Toaster />
             <div id="Encabezado">
                 <div id="EncabezadoTabla">
                     <h2>CLASIFICACIONES</h2>
@@ -159,8 +223,8 @@ const MainClasificaciones = ({ className }) => {
                     </div>
                 </div>
                 <div id="Botones">
-                    <button onClick={() => setIsModalOpen(true)}>Añadir Nuevo</button>
-                    <button onClick={refreshClasificaciones}>Refrescar Datos</button>
+                    <button onClick={() => { setIsModalOpen(true); setSelectedClasificacion(null); }}>Añadir Nuevo</button>
+                    <button onClick={() => queryClient.invalidateQueries({ queryKey: ['clasificaciones'] })}>Refrescar Datos</button>
                     <ModalClasificaciones
                         isOpen={isModalOpen}
                         onClose={() => { setIsModalOpen(false); setSelectedClasificacion(null) }}
@@ -172,7 +236,10 @@ const MainClasificaciones = ({ className }) => {
                         isOpen={isModalConfirmacionOpen}
                         title="Confirmar Eliminación"
                         message="¿Estás seguro de que deseas eliminar esta clasificación?"
-                        onClose={() => { setIsModalConfirmacionOpen(false); setClasificacionToDelete(null) }}
+                        onClose={() => {
+                            setIsModalConfirmacionOpen(false);
+                            setClasificacionToDelete(null);
+                        }}
                         onConfirm={handleDelete}
                     />
                 </div>
