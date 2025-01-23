@@ -1,4 +1,4 @@
-const baseUrl = 'http://localhost:8081/api';
+const baseUrl = 'http://34.175.60.182:9000/api';
 
 export const fetchDepartamentos = async () => {
     const response = await fetch(`${baseUrl}/departamentos`);
