@@ -26,7 +26,7 @@ const MainDepartamentos = ({ className }) => {
 
     const mutationAdd = useMutation({
         mutationFn: (newDepartamento) => 
-            fetch('http://34.175.60.182:9000/api/departamentos', {
+            fetch('http://localhost:8000/api/departamentos', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -56,7 +56,7 @@ const MainDepartamentos = ({ className }) => {
 
     const mutationUpdate = useMutation({
         mutationFn: (updatedDepartamento) => 
-            fetch(`http://34.175.60.182:9000/api/departamentos/${updatedDepartamento.id}`, {
+            fetch(`http://localhost:8000/api/departamentos/${updatedDepartamento.id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -86,7 +86,7 @@ const MainDepartamentos = ({ className }) => {
 
     const mutationDelete = useMutation({
         mutationFn: (id) => 
-            fetch(`http://34.175.60.182:9000/api/departamentos/${id}`, {
+            fetch(`http://localhost:8000/api/departamentos/${id}`, {
                 method: 'DELETE',
             }),
         onSuccess: () => {

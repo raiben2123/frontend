@@ -83,7 +83,7 @@ const ModalPeticionarios = ({ isOpen, onClose, onAdd, onUpdate, peticionario, em
         try {
             let representaId = null;
             if (formData.empresaCIF.trim()) {
-                const response = await fetch(`http://34.175.60.182:9000/api/empresas/cif/${formData.empresaCIF}`);
+                const response = await fetch(`http://localhost:8000/api/empresas/cif/${formData.empresaCIF}`);
                 const empresas = await response.json();
                 if (empresas.length === 0) {
                     // Si no se encuentra una empresa con el CIF proporcionado, abrir el modal para crearla
@@ -130,7 +130,7 @@ const ModalPeticionarios = ({ isOpen, onClose, onAdd, onUpdate, peticionario, em
 
     const handleAddOrUpdateEmpresa = async (empresaData) => {
         try {
-            const response = await fetch('http://34.175.60.182:9000/api/empresas', {
+            const response = await fetch('http://localhost:8000/api/empresas', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
