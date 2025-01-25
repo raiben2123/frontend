@@ -25,7 +25,7 @@ const MainEstadosExpedientes = ({ className }) => {
 
     const mutationAdd = useMutation({
         mutationFn: (newEstado) =>
-            fetch('http://localhost:8000/api/estadosexpedientes', {
+            fetch('http://localhost:9000/api/estadosexpedientes', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -55,7 +55,7 @@ const MainEstadosExpedientes = ({ className }) => {
 
     const mutationUpdate = useMutation({
         mutationFn: (updatedEstado) =>
-            fetch(`http://localhost:8000/api/estadosexpedientes/${updatedEstado.id}`, {
+            fetch(`http://localhost:9000/api/estadosexpedientes/${updatedEstado.id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -85,7 +85,7 @@ const MainEstadosExpedientes = ({ className }) => {
 
     const mutationDelete = useMutation({
         mutationFn: (id) =>
-            fetch(`http://localhost:8000/api/estadosexpedientes/${id}`, {
+            fetch(`http://localhost:9000/api/estadosexpedientes/${id}`, {
                 method: 'DELETE',
             }),
         onSuccess: () => {

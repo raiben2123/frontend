@@ -1,4 +1,4 @@
-const baseUrl = 'http://localhost:8000/api';
+const baseUrl = 'http://localhost:9000/api';
 
 export const fetchDepartamentos = async () => {
     const response = await fetch(`${baseUrl}/departamentos`);

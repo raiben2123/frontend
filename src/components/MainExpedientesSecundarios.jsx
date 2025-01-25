@@ -76,7 +76,7 @@ const MainExpedientesSecundarios = ({ className }) => {
         mutationFn: async (data) => {
             console.log('Data to save:', data);
             const method = data.id ? 'PUT' : 'POST';
-            const url = data.id ? `http://localhost:8000/api/expedientessecundarios/${data.id}` : 'http://34.175.60.182:9000/api/expedientessecundarios';
+            const url = data.id ? `http://localhost:9000/api/expedientessecundarios/${data.id}` : 'http://34.175.60.182:9000/api/expedientessecundarios';
             const response = await fetch(url, {
                 method,
                 headers: { 'Content-Type': 'application/json' },
@@ -100,7 +100,7 @@ const MainExpedientesSecundarios = ({ className }) => {
     // Mutation for deleting an expediente
     const mutationDeleteExpediente = useMutation({
         mutationFn: (id) =>
-            fetch(`http://localhost:8000/api/expedientessecundarios/${id}`, {
+            fetch(`http://localhost:9000/api/expedientessecundarios/${id}`, {
                 method: 'DELETE',
             }),
         onSuccess: () => {
