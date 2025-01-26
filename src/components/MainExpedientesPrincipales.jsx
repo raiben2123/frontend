@@ -70,7 +70,7 @@ const MainExpedientesPrincipales = ({ className }) => {
         mutationFn: async (data) => {
             console.log('Data to save:', data);
             const method = data.id ? 'PUT' : 'POST';
-            const url = data.id ? `http://localhost:9000/api/expedientesprincipales/${data.id}` : 'http://localhost:9000/api/expedientesprincipales';
+            const url = data.id ? `http://143.131.204.234:9000/api/expedientesprincipales/${data.id}` : 'http://143.131.204.234:9000/api/expedientesprincipales';
             const response = await fetch(url, {
                 method,
                 headers: { 'Content-Type': 'application/json' },
@@ -94,7 +94,7 @@ const MainExpedientesPrincipales = ({ className }) => {
     // Mutation for deleting an expediente
     const mutationDeleteExpediente = useMutation({
         mutationFn: (id) =>
-            fetch(`http://localhost:9000/api/expedientesprincipales/${id}`, {
+            fetch(`http://143.131.204.234:9000/api/expedientesprincipales/${id}`, {
                 method: 'DELETE',
             }),
         onSuccess: () => {

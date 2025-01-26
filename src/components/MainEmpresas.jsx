@@ -46,10 +46,10 @@ const MainEmpresas = ({ className }) => {
         mutationFn: (empresaData) => {
             let url, method;
             if (empresaData.id) {
-                url = `http://localhost:9000/api/empresas/${empresaData.id}`;
+                url = `http://143.131.204.234:9000/api/empresas/${empresaData.id}`;
                 method = 'PUT';
             } else {
-                url = 'http://localhost:9000/api/empresas';
+                url = 'http://143.131.204.234:9000/api/empresas';
                 method = 'POST';
             }
 
@@ -87,7 +87,7 @@ const MainEmpresas = ({ className }) => {
     // Mutation for deleting empresa
     const mutationDeleteEmpresa = useMutation({
         mutationFn: (id) =>
-            fetch(`http://localhost:9000/api/empresas/${id}`, {
+            fetch(`http://143.131.204.234:9000/api/empresas/${id}`, {
                 method: 'DELETE',
             }),
         onSuccess: () => {

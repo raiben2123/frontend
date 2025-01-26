@@ -47,12 +47,12 @@ const MainPeticionarios = ({ className }) => {
     // Use Query for fetch peticionarios
     const { data: peticionarios, isLoading: loadingPeticionarios, isError: errorPeticionarios } = useQuery({
         queryKey: ['peticionarios'],
-        queryFn: () => fetch('http://localhost:9000/api/peticionarios').then(res => res.json()),
+        queryFn: () => fetch('http://143.131.204.234:9000/api/peticionarios').then(res => res.json()),
     });
 
     const { data: empresas, isLoading: loadingEmpresas, isError: errorEmpresas } = useQuery({
         queryKey: ['empresas'],
-        queryFn: () => fetch('http://localhost:9000/api/empresas').then(res => res.json()),
+        queryFn: () => fetch('http://143.131.204.234:9000/api/empresas').then(res => res.json()),
     });
 
     const mutationPeticionario = useMutation({
@@ -61,10 +61,10 @@ const MainPeticionarios = ({ className }) => {
             
             let url, method;
             if (peticionarioData.id) {
-                url = `http://localhost:9000/api/peticionarios/${peticionarioData.id}`;
+                url = `http://143.131.204.234:9000/api/peticionarios/${peticionarioData.id}`;
                 method = 'PUT';
             } else {
-                url = 'http://localhost:9000/api/peticionarios';
+                url = 'http://143.131.204.234:9000/api/peticionarios';
                 method = 'POST';
             }
     
@@ -104,7 +104,7 @@ const MainPeticionarios = ({ className }) => {
     // Mutation for deleting peticionario
     const mutationDeletePeticionario = useMutation({
         mutationFn: (id) => 
-            fetch(`http://localhost:9000/api/peticionarios/${id}`, {
+            fetch(`http://143.131.204.234:9000/api/peticionarios/${id}`, {
                 method: 'DELETE',
             }),
         onSuccess: () => {
@@ -133,7 +133,7 @@ const MainPeticionarios = ({ className }) => {
     // Mutation for adding empresa
     const mutationAddEmpresa = useMutation({
         mutationFn: (empresaData) => 
-            fetch('http://localhost:9000/api/empresas', {
+            fetch('http://143.131.204.234:9000/api/empresas', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

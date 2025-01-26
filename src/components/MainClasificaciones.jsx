@@ -26,7 +26,7 @@ const MainClasificaciones = ({ className }) => {
 
     const mutationAdd = useMutation({
         mutationFn: (newClasificacion) =>
-            fetch('http://localhost:9000/api/clasificaciones', {
+            fetch('http://143.131.204.234:9000/api/clasificaciones', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -56,7 +56,7 @@ const MainClasificaciones = ({ className }) => {
 
     const mutationUpdate = useMutation({
         mutationFn: (updatedClasificacion) =>
-            fetch(`http://localhost:9000/api/clasificaciones/${updatedClasificacion.id}`, {
+            fetch(`http://143.131.204.234:9000/api/clasificaciones/${updatedClasificacion.id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -86,7 +86,7 @@ const MainClasificaciones = ({ className }) => {
 
     const mutationDelete = useMutation({
         mutationFn: (id) =>
-            fetch(`http://localhost:9000/api/clasificaciones/${id}`, {
+            fetch(`http://143.131.204.234:9000/api/clasificaciones/${id}`, {
                 method: 'DELETE',
             }),
         onSuccess: () => {
