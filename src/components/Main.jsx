@@ -1,5 +1,4 @@
 import React from "react";
-import "../css/MainContent.css";
 import { Link } from "react-router-dom";
 
 const MainContent = ({ className }) => {

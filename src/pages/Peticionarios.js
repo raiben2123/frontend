@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import MainHeader from "../components/Header";
+import Header from "../components/Header";
 import Side from "../components/Side"
 import MainPeticionarios from "../components/MainPeticionarios"
 
@@ -10,13 +10,21 @@ const Peticionarios = () => {
         setIsSidebarOpen(!isSidebarOpen); // Alternar el estado del sidebar
     };
     return (
-        <div id="Home">
-            <MainHeader />
-            <div id="Contenido" style={{ display: "flex" }}>
-                <Side isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} /> {/* Pasar estado y función */}
-                <MainPeticionarios className={isSidebarOpen ? 'sidebar-visible' : 'sidebar-hidden'} /> {/* Cambiar clase */}
+        <div className="flex h-screen bg-gray-100">
+            {/* Barra lateral */}
+            <Side isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
+
+            {/* Contenido principal */}
+            <div className="flex flex-col flex-1 bg-white shadow-lg">
+                {/* Encabezado */}
+                <Header toggleSidebar={toggleSidebar} isSidebarOpen={isSidebarOpen} />
+
+                {/* Área de contenido principal */}
+                <div className={`flex-1 p-6 transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-16'}`} style={{ marginTop: '0' }}>
+                <MainPeticionarios/> {/* Cambiar clase */}
             </div>
         </div>
+                </div>
     );
 };
 

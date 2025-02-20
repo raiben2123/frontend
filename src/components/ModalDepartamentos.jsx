@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import '../css/ModalClasificaciones.css'; // Asegúrate de tener el CSS correspondiente
 
 const ModalDepartamentos = ({ isOpen, onClose, onAdd, onUpdate, departamento }) => {
     const [formData, setFormData] = useState({ name: '' });

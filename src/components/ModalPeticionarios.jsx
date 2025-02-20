@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import '../css/ModalPeticionarios.css';
 import ModalEmpresas from './ModalEmpresas';
 
 const ModalPeticionarios = ({ isOpen, onClose, onAdd, onUpdate, peticionario, empresas = [] }) => {

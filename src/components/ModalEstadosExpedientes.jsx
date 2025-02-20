@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import '../css/ModalClasificaciones.css'; // Asegúrate de tener el CSS correspondiente
 
 const ModalEstadosExpedientes = ({ isOpen, onClose, onAdd, onUpdate, estadosExpedientes }) => {
     const [formData, setFormData] = useState({ name: '' });

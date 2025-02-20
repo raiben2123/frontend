@@ -1,7 +1,16 @@
-const baseUrl = 'http://143.131.204.234:9000/api';
+const baseUrl = 'http://localhost:9000/api';
+
+const token = localStorage.getItem('token'); // Asegúrate de que este sea el nombre correcto
+
 
 export const fetchDepartamentos = async () => {
-    const response = await fetch(`${baseUrl}/departamentos`);
+    const response = await fetch(`${baseUrl}/departamentos`, {
+        method: 'GET', // Asegura que es GET
+        mode: 'cors',
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    });
     const data = await response.json();
     return data.map(departamento => ({ id: departamento.id, 
         name: departamento.name, 
@@ -9,16 +18,37 @@ export const fetchDepartamentos = async () => {
 };
 
 export const fetchClasificaciones = async () => {
-    const response = await fetch(`${baseUrl}/clasificaciones`);
+    const response = await fetch(`${baseUrl}/clasificaciones`, {
+        method: 'GET', // Asegura que es GET
+        mode: 'cors',  // Habilita CORS
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    });
+
+    if (!response.ok) {
+        throw new Error(`Error en la petición: ${response.status} ${response.statusText}`);
+    }
+
     const data = await response.json();
-    return data.map(clasificacion => ({ id: clasificacion.id, 
-        name: `${clasificacion.name}` ,
-        acronym:` ${clasificacion.acronym}` ,
-        label: `${clasificacion.name} - ${clasificacion.acronym}`}));
+    return data.map(clasificacion => ({
+        id: clasificacion.id,
+        name: clasificacion.name,
+        acronym: clasificacion.acronym,
+        label: `${clasificacion.name} - ${clasificacion.acronym}`
+    }));
 };
 
+
+
 export const fetchPeticionarios = async () => {
-    const response = await fetch(`${baseUrl}/peticionarios`);
+    const response = await fetch(`${baseUrl}/peticionarios`, {
+        method: 'GET', // Asegura que es GET
+        mode: 'cors',
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    });
     const data = await response.json();
     return data.map(peticionario => ({
         id: peticionario.id,
@@ -33,7 +63,13 @@ export const fetchPeticionarios = async () => {
 };
 
 export const fetchEstadosExpedientes = async () => {
-    const response = await fetch(`${baseUrl}/estadosexpedientes`);
+    const response = await fetch(`${baseUrl}/estadosexpedientes`, {
+        method: 'GET', // Asegura que es GET
+        mode: 'cors',
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    });
     const data = await response.json();
     return data.map(estado => ({ id: estado.id, 
         name: estado.name,
@@ -42,7 +78,13 @@ export const fetchEstadosExpedientes = async () => {
 };
 
 export const fetchEmpresas = async () => {
-    const response = await fetch(`${baseUrl}/empresas`);
+    const response = await fetch(`${baseUrl}/empresas`, {
+        method: 'GET', // Asegura que es GET
+        mode: 'cors',
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    });
     const data = await response.json();
     return data.map(empresa => ({ id: empresa.id, 
         label: `${empresa.name} - ${empresa.cif}`,
@@ -55,7 +97,13 @@ export const fetchEmpresas = async () => {
 }
 
 export const fetchExpedientesPrincipales = async () => {
-    const response = await fetch(`${baseUrl}/expedientesprincipales`);
+    const response = await fetch(`${baseUrl}/expedientesprincipales`, {
+        method: 'GET', // Asegura que es GET
+        mode: 'cors',
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    });
     const data = await response.json();
     return data.map(expediente => ({ id: expediente.id, 
         departamentoId: expediente.departamentoId, 
@@ -75,7 +123,13 @@ export const fetchExpedientesPrincipales = async () => {
 }
 
 export const fetchExpedientesSecundarios = async () => {
-    const response = await fetch(`${baseUrl}/expedientessecundarios`);
+    const response = await fetch(`${baseUrl}/expedientessecundarios`, {
+        method: 'GET', // Asegura que es GET
+        mode: 'cors',
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    });
     const data = await response.json();
     console.log(data);
     return data.map(expediente => ({ id: expediente.id, 

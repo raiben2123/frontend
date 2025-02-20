@@ -1,0 +1,44 @@
+/* Ejemplo de estilos globales en un archivo CSS, como App.css */
+
+body {
+    background-color: #F0F4F8; /* Fondo claro */
+    color: #333333; /* Texto oscuro */
+}
+
+/* Sidebar */
+#MainSide {
+    background-color: #E3E4E8; /* Color suave para el sidebar */
+}
+
+/* Encabezado */
+#divHeader {
+    background-color: #4A90E2; /* Color azul claro para el header */
+    color: white; /* Texto blanco en el header */
+}
+
+/* Botones */
+.toggle-btn,
+.refresh-btn,
+.options-btn {
+    background-color: transparent; /* Botones transparentes */
+    color: #4A90E2; /* Texto azul claro */
+    border: 2px solid #4A90E2; /* Borde azul claro */
+    padding: 0.5rem 1rem;
+    transition: background-color 0.3s, color 0.3s; /* Transiciones suaves */
+}
+
+.toggle-btn:hover,
+.refresh-btn:hover,
+.options-btn:hover {
+    background-color: rgba(74, 144, 226, 0.1); /* Efecto hover suave */
+    color: #4A90E2; /* Mantener texto azul claro */
+}
+
+/* Enlaces en el sidebar */
+.sidebar-list .enlace {
+    color: #333333; /* Texto oscuro para los enlaces */
+}
+
+.sidebar-list .enlace:hover {
+    color: #4A90E2; /* Cambiar color al pasar el ratón */
+}

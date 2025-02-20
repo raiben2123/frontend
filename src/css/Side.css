@@ -1,174 +1,23 @@
-/* RESET */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: "Arial", sans-serif;
-}
+/* Ejemplo de Side.css */
 
-/* SIDEBAR */
 #MainSide {
-    background-color: #333;
-    color: #fff;
-    width: 250px;
-    height: 94.6vh;
-    display: flex;
-    flex-direction: column;
-    transition: transform 0.3s ease;
-    box-shadow: 3px 0 10px rgba(0, 0, 0, 0.3);
-}
-
-.sidebar-closed {
-    transform: translateX(-72%);
+    position: fixed; /* Mantener el sidebar fijo */
+    top: 0; /* Alineado al principio de la página */
+    left: 0; /* Alineado a la izquierda */
+    width: 250px; /* Ancho del sidebar */
+    height: 100%; /* Altura completa */
+    background-color: #f8f9fa; /* Color de fondo */
+    transition: transform 0.3s ease; /* Transición suave */
+    z-index: 1000; /* Asegúrate de que el sidebar esté sobre otros elementos */
+    margin-top: 64px;
 }
 
 .sidebar-open {
-    transform: translateX(0);
+    transform: translateX(0); /* Mostrar sidebar */
 }
 
-/* HEADER TOGGLE BUTTON */
-.sidebar-header {
-    display: flex;
-    justify-content: flex-end;
-    padding: 10px;
+.sidebar-closed {
+    transform: translateX(-100%); /* Ocultar sidebar */
 }
 
-.toggle-btn {
-    background: none;
-    border: none;
-    color: white;
-    font-size: 1.2rem;
-    cursor: pointer;
-    transition: color 0.3s;
-}
-
-.toggle-btn:hover {
-    color: #00aaff;
-}
-
-.icon {
-    font-size: 1.5rem;
-}
-
-/* NAVIGATION CONTENT */
-.sidebar-content {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-}
-
-.sidebar-list,
-.options-list {
-    list-style: none;
-}
-
-.sidebar-list li,
-.options-list li {
-    padding: 12px 20px;
-    transition: background 0.3s, color 0.3s;
-}
-
-.sidebar-list li:hover,
-.options-list li:hover {
-    background-color: #00aaff;
-    cursor: pointer;
-}
-
-.enlace {
-    text-decoration: none;
-    color: white;
-    display: block;
-}
-
-.enlace:hover {
-    color: #f4f4f4;
-}
-
-/* OPTIONS TOGGLE */
-.sidebar-options {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    margin-top: 50%;
-}
-
-.options-btn {
-    background: none;
-    border: none;
-    color: white;
-    font-size: 1.2rem;
-    margin-left: 20px;
-    cursor: pointer;
-    transition: color 0.3s;
-}
-
-.options-btn:hover {
-    color: #00aaff;
-}
-
-.options-list {
-    margin-top: 10px;
-}
-
-.options-list li {
-    padding-left: 30px;
-}
-
-.sidebar-closed > nav > ul {
-    display: none;
-}
-
-/* ESTILOS DE TABLA */
-#EncabezadoTabla {
-    background-color: #333; /* Color de fondo deseado */
-    color: #fff; /* Color del texto */
-    padding: 10px; /* Espaciado */
-    text-align: left; /* Alinear el texto */
-}
-
-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-table th, table td {
-    padding: 10px;
-    border: 1px solid #ddd;
-}
-
-/* Estilo para las filas de la tabla */
-table tr:nth-child(even) {
-    background-color: #f2f2f2; /* Color de fondo para filas pares */
-}
-
-table tr:hover {
-    background-color: #ddd; /* Color al pasar el mouse */
-}
-
-/* Botón de Refrescar */
-.refresh-data {
-    display: flex;
-    justify-content: center; /* Centrar horizontalmente */
-    align-items: center; /* Centrar verticalmente */
-    margin-top: auto; /* Empujar al final del sidebar */
-    padding: 10px 0; /* Añadir algo de espacio */
-}
-
-.refresh-btn {
-    background: none;
-    border: none;
-    color: white;
-    font-size: 1.2rem;
-    cursor: pointer;
-    transition: color 0.3s;
-}
-
-.refresh-btn:hover {
-    color: #00aaff;
-}
-
-.refresh-label {
-    color: white;
-    margin-left: 5px; /* Espacio entre el icono y el texto */
-    font-size: 0.9rem;
-}
+/* Otras reglas de estilo */

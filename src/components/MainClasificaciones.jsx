@@ -1,10 +1,8 @@
-import React, { useState } from "react";
-import '../css/MainClasificaciones.css';
+import React, { useState, useEffect } from "react";
 import busqueda from '../img/busqueda.png';
 import ModalClasificaciones from './ModalClasificaciones';
 import ModalGenerico from './ModalGenerico';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchClasificaciones } from '../api/apiService'; // Asegúrate de que la ruta es correcta
+import { useMutation } from '@tanstack/react-query';
 import { Toaster, toast } from 'sonner';
 
 const MainClasificaciones = ({ className }) => {
@@ -16,31 +14,69 @@ const MainClasificaciones = ({ className }) => {
     const [selectedClasificacion, setSelectedClasificacion] = useState(null);
     const [clasificacionToDelete, setClasificacionToDelete] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [clasificaciones, setClasificaciones] = useState([]);
+    const [clasificacionToDeleteId, setClasificacionToDeleteId] = useState(null);
 
-    const queryClient = useQueryClient();
+    const token = localStorage.getItem('token');
 
-    const { data: clasificaciones, isLoading, isError, error } = useQuery({
-        queryKey: ['clasificaciones'],
-        queryFn: fetchClasificaciones
-    });
+    // Cargar clasificaciones desde localStorage cuando se monta el componente
+    useEffect(() => {
+        const savedClasificaciones = localStorage.getItem('clasificaciones');
+        if (savedClasificaciones) {
+            setClasificaciones(JSON.parse(savedClasificaciones));
+        } else {
+            fetchClasificaciones(); // Llamar a fetch si no hay datos en el localStorage
+        }
+    }, []);
+
+    // Función para hacer el GET y almacenar en localStorage
+    const fetchClasificaciones = async () => {
+        try {
+            const response = await fetch('http://localhost:9000/api/clasificaciones', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+            const data = await response.json();
+            setClasificaciones(data);
+            localStorage.setItem('clasificaciones', JSON.stringify(data)); // Guardar los datos en localStorage
+        } catch (error) {
+            toast.error('Error al cargar las clasificaciones', {
+                style: { background: '#F44336', color: 'white', fontWeight: 'bold' },
+            });
+        }
+    };
 
     const mutationAdd = useMutation({
         mutationFn: (newClasificacion) =>
-            fetch('http://143.131.204.234:9000/api/clasificaciones', {
+            fetch('http://localhost:9000/api/clasificaciones', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify(newClasificacion),
             }),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['clasificaciones'] });
-            toast.success('Clasificación añadida correctamente', {
-                style: {
-                    background: '#4CAF50',
-                    color: 'white',
-                    fontWeight: 'bold'
-                }
+        onSuccess: (response) => {
+            response.json().then(data => {
+                // Asumiendo que el backend devuelve el objeto con el id ya asignado
+                const storedClasificaciones = JSON.parse(localStorage.getItem('clasificaciones')) || [];
+
+                // Actualizamos las clasificaciones locales con el nuevo objeto que incluye el id
+                const updatedClasificaciones = [...storedClasificaciones, data]; // 'data' debería contener la clasificación con 'id'
+                setClasificaciones(updatedClasificaciones);
+                // Aquí se actualiza el estado de clasificaciones
+                // Si usas useState o Context, deberías actualizarlo
+                localStorage.setItem('clasificaciones', JSON.stringify(updatedClasificaciones));
+
+                toast.success('Clasificación añadida correctamente', {
+                    style: {
+                        background: '#4CAF50',
+                        color: 'white',
+                        fontWeight: 'bold'
+                    }
+                });
             });
         },
         onError: (error) => {
@@ -54,50 +90,62 @@ const MainClasificaciones = ({ className }) => {
         },
     });
 
+
     const mutationUpdate = useMutation({
-        mutationFn: (updatedClasificacion) =>
-            fetch(`http://143.131.204.234:9000/api/clasificaciones/${updatedClasificacion.id}`, {
+        mutationFn: async (updatedClasificacion) => {
+            await fetch(`http://localhost:9000/api/clasificaciones/${updatedClasificacion.id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
                 },
                 body: JSON.stringify(updatedClasificacion),
-            }),
+            });
+            const updatedClasificaciones = clasificaciones.map((clasificacion) =>
+                clasificacion.id === updatedClasificacion.id ? updatedClasificacion : clasificacion
+            );
+            setClasificaciones(updatedClasificaciones);
+            localStorage.setItem('clasificaciones', JSON.stringify(updatedClasificaciones)); // Actualizar localStorage
+        },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['clasificaciones'] });
             toast.success('Clasificación actualizada correctamente', {
-                style: {
-                    background: '#4CAF50',
-                    color: 'white',
-                    fontWeight: 'bold'
-                }
+                style: { background: '#4CAF50', color: 'white', fontWeight: 'bold' },
             });
         },
         onError: (error) => {
             toast.error('Error al actualizar la clasificación: ' + error.message, {
-                style: {
-                    background: '#F44336',
-                    color: 'white',
-                    fontWeight: 'bold'
-                }
+                style: { background: '#F44336', color: 'white', fontWeight: 'bold' },
             });
         },
     });
 
     const mutationDelete = useMutation({
         mutationFn: (id) =>
-            fetch(`http://143.131.204.234:9000/api/clasificaciones/${id}`, {
+            fetch(`http://localhost:9000/api/clasificaciones/${id}`, {
                 method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
             }),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['clasificaciones'] });
-            toast.success('Clasificación eliminada correctamente', {
-                style: {
-                    background: '#4CAF50',
-                    color: 'white',
-                    fontWeight: 'bold'
-                }
-            });
+            if (clasificacionToDeleteId) { // Ahora usamos el nuevo estado
+                setClasificaciones(prevClasificaciones => {
+                    const updatedClasificaciones = prevClasificaciones.filter(clasificacion => 
+                        clasificacion.id.toString() !== clasificacionToDeleteId.toString()
+                    );
+            
+                    localStorage.setItem('clasificaciones', JSON.stringify(updatedClasificaciones));
+                    return updatedClasificaciones;
+                });
+                toast.success('Clasificación eliminada correctamente', {
+                    style: {
+                        background: '#4CAF50',
+                        color: 'white',
+                        fontWeight: 'bold'
+                    }
+                });
+                setClasificacionToDeleteId(null); // Reseteamos el estado después de la operación exitosa
+            }
         },
         onError: (error) => {
             toast.error('Error al eliminar la clasificación: ' + error.message, {
@@ -110,6 +158,8 @@ const MainClasificaciones = ({ className }) => {
         },
     });
 
+
+
     const toggleFiltro = () => {
         setFiltroExpanded(!filtroExpanded);
     };
@@ -120,46 +170,43 @@ const MainClasificaciones = ({ className }) => {
     };
 
     const handleEdit = (clasificacion) => {
-        // Aseguramos que estamos pasando el objeto completo al modal
         setSelectedClasificacion(clasificacion);
         setIsModalOpen(true);
     };
 
     const handleUpdate = (updatedClasificacion) => {
-        // Aseguramos que estamos enviando el objeto correcto para actualizar
         mutationUpdate.mutate(updatedClasificacion);
         setIsModalOpen(false);
         setSelectedClasificacion(null);
     };
 
     const handleDelete = () => {
+    
         if (clasificacionToDelete) {
-            console.log("Deleting classification with ID:", clasificacionToDelete); // Añadir log para depuración
-            mutationDelete.mutate(clasificacionToDelete);
-            setClasificacionToDelete(null); // Limpiamos inmediatamente para evitar múltiples eliminaciones
-            setIsModalConfirmacionOpen(false); // Cerramos el modal de confirmación
+            setClasificacionToDeleteId(clasificacionToDelete.id); // Guardamos el id antes de mutar
+            mutationDelete.mutate(clasificacionToDelete.id); 
+            setClasificacionToDelete(null); // Ahora sí puedes setearlo a null
+            setIsModalConfirmacionOpen(false);
         } else {
-            console.log("No clasification to delete set."); // Log si no hay ID para eliminar
+            console.log("No se ha seleccionado ninguna clasificación para eliminar.");
         }
     };
 
-    const openDeleteModal = (id) => {
-        setClasificacionToDelete(id);
+
+    const openDeleteModal = (clasificacion) => {
+        console.log("Abriendo modal para eliminar:", clasificacion); // Esto nos ayudará a verificar si el objeto está siendo pasado correctamente
+        setClasificacionToDelete(clasificacion);  // Aquí se debe pasar el objeto completo
         setIsModalConfirmacionOpen(true);
     };
 
-    if (isLoading) return <div>Cargando clasificaciones...</div>;
-    if (isError) return <div>Error: {error.message}</div>;
+
 
     const indexOfLastItem = currentPage * itemsPerPage;
     const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-    const filteredClasificaciones = Array.isArray(clasificaciones) ? clasificaciones.filter(clasificacion => {
-        if (clasificacion && typeof clasificacion.name === 'string' && typeof clasificacion.acronym === 'string') {
-            return clasificacion.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                clasificacion.acronym.toLowerCase().includes(searchTerm.toLowerCase());
-        }
-        return false; // Si no tiene name y acronym como strings, no lo incluimos en el filtro
-    }) : [];
+    const filteredClasificaciones = clasificaciones.filter(clasificacion => {
+        return clasificacion.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            clasificacion.acronym.toLowerCase().includes(searchTerm.toLowerCase());
+    });
 
     const currentItems = filteredClasificaciones.slice(indexOfFirstItem, indexOfLastItem);
     const totalPages = Math.ceil(filteredClasificaciones.length / itemsPerPage);
@@ -169,81 +216,85 @@ const MainClasificaciones = ({ className }) => {
     };
 
     return (
-        <div id="MainClasificaciones" className={className}>
+        <div id="MainClasificaciones" className={`bg-gray-200 p-5 rounded-lg transition-all duration-300 ${className}`}>
             <Toaster />
-            <div id="Encabezado">
-                <div id="EncabezadoTabla">
-                    <h2>CLASIFICACIONES</h2>
-                    <div id="filtroContainer">
+            <div id="Encabezado" className="mb-4">
+                <div id="EncabezadoTabla" className="flex justify-between items-center">
+                    <h2 className="text-2xl font-semibold">CLASIFICACIONES</h2>
+                    <div id="filtroContainer" className="flex items-center">
                         <input
                             type="text"
                             id="filtro"
-                            className={filtroExpanded ? 'expanded' : ''}
+                            className={`border rounded p-2 ${filtroExpanded ? 'w-64' : 'w-32'} transition-all duration-300`}
                             onFocus={toggleFiltro}
                             onBlur={toggleFiltro}
                             placeholder="Buscar..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
-                        <img src={busqueda} alt="Buscar" id="lupa" />
+                        <img src={busqueda} alt="Buscar" id="lupa" className="ml-2 w-6 h-6 cursor-pointer" />
                     </div>
                 </div>
             </div>
             <div id="CuerpoTabla">
-                <table>
-                    <thead>
+                <table className="min-w-full border border-gray-300">
+                    <thead className="bg-gray-100">
                         <tr>
-                            <th>Nombre</th>
-                            <th>Siglas</th>
-                            <th>Acciones</th>
+                            <th className="border px-4 py-2">Nombre</th>
+                            <th className="border px-4 py-2">Siglas</th>
+                            <th className="border px-4 py-2">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
                         {currentItems.map((clasificacion) => (
-                            <tr key={clasificacion.id}>
-                                <td>{clasificacion.name}</td>
-                                <td>{clasificacion.acronym}</td>
-                                <td>
-                                    <button onClick={() => handleEdit(clasificacion)}>Modificar</button>
-                                    <button className="btn-delete" onClick={() => openDeleteModal(clasificacion.id)}>Eliminar</button>
+                            <tr key={clasificacion.id} className="border-b hover:bg-gray-50">
+                                <td className="border px-4 py-2">{clasificacion.name}</td>
+                                <td className="border px-4 py-2">{clasificacion.acronym}</td>
+                                <td className="border px-4 py-2">
+                                    <button onClick={() => handleEdit(clasificacion)} className="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600">Modificar</button>
+                                    <button className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 ml-2" onClick={() => openDeleteModal(clasificacion)}>Eliminar</button>
                                 </td>
                             </tr>
                         ))}
                     </tbody>
                 </table>
-                <div id="Paginacion">
+                <div id="Paginacion" className="flex justify-between items-center mt-4">
                     <span>Página {currentPage} de {totalPages}</span>
-                    <div id="Botones">
+                    <div id="Botones" className="flex">
                         <button
+                            className={`bg-gray-300 px-3 py-1 rounded ${currentPage === 1 && 'opacity-50 cursor-not-allowed'}`}
                             disabled={currentPage === 1}
                             onClick={() => handlePageChange(currentPage - 1)}>Anterior</button>
                         <button
+                            className={`bg-gray-300 px-3 py-1 rounded ${currentPage === totalPages && 'opacity-50 cursor-not-allowed'}`}
                             disabled={currentPage === totalPages}
                             onClick={() => handlePageChange(currentPage + 1)}>Siguiente</button>
                     </div>
                 </div>
-                <div id="Botones">
-                    <button onClick={() => { setIsModalOpen(true); setSelectedClasificacion(null); }}>Añadir Nuevo</button>
-                    <button onClick={() => queryClient.invalidateQueries({ queryKey: ['clasificaciones'] })}>Refrescar Datos</button>
-                    <ModalClasificaciones
-                        isOpen={isModalOpen}
-                        onClose={() => { setIsModalOpen(false); setSelectedClasificacion(null) }}
-                        onAdd={handleAdd}
-                        onUpdate={handleUpdate}
-                        clasificacion={selectedClasificacion}
-                    />
-                    <ModalGenerico
-                        isOpen={isModalConfirmacionOpen}
-                        title="Confirmar Eliminación"
-                        message="¿Estás seguro de que deseas eliminar esta clasificación?"
-                        onClose={() => {
-                            setIsModalConfirmacionOpen(false);
-                            setClasificacionToDelete(null);
-                        }}
-                        onConfirm={handleDelete}
-                    />
+                <div className="flex justify-end mt-4">
+                    <button
+                        onClick={() => setIsModalOpen(true)}
+                        className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+                        Añadir Clasificación
+                    </button>
                 </div>
             </div>
+
+            {/* Modales */}
+            <ModalClasificaciones
+                isOpen={isModalOpen}
+                onClose={() => (setIsModalOpen(false), setSelectedClasificacion(null))}
+                clasificacion={selectedClasificacion}
+                onAdd={handleAdd}
+                onUpdate={handleUpdate}
+            />
+            <ModalGenerico
+                isOpen={isModalConfirmacionOpen}
+                onClose={() => setIsModalConfirmacionOpen(false)}
+                onConfirm={handleDelete}
+                title="Confirmación"
+                message="¿Estás seguro de que deseas eliminar esta clasificación?"
+            />
         </div>
     );
 };

@@ -1,5 +1,4 @@
-import React, { useState } from "react";
-import '../css/MainPeticionarios.css';
+import React, { useState, useEffect } from "react";
 import busqueda from '../img/busqueda.png';
 import { DndContext, closestCenter } from '@dnd-kit/core';
 import { arrayMove, SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable';
@@ -7,7 +6,7 @@ import { SortableItem } from './SortableItem';
 import ModalPeticionarios from './ModalPeticionarios';
 import ModalGenerico from './ModalGenerico';
 import ModalEmpresas from './ModalEmpresas';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { Toaster, toast } from 'sonner';
 
 const MainPeticionarios = ({ className }) => {
@@ -16,24 +15,24 @@ const MainPeticionarios = ({ className }) => {
     const [currentPageNIF, setCurrentPageNIF] = useState(1);
     const itemsPerPage = 4;
     const [columnsDNI, setColumnsDNI] = useState([
-        { id: 'dni', label: 'DNI' },
-        { id: 'name', label: 'Nombre' },
-        { id: 'surname', label: 'Apellido' },
-        { id: 'tlf', label: 'Teléfono' },
-        { id: 'email', label: 'Email' },
-        { id: 'address', label: 'Dirección' },
-        { id: 'representa', label: 'Representa' },
-        { id: 'actions', label: 'Acciones' }
+        { id: 'dni', label: 'DNI', width: '10%' },
+        { id: 'name', label: 'Nombre', width: '10%' },
+        { id: 'surname', label: 'Apellido', width: '13.5%' },
+        { id: 'tlf', label: 'Teléfono', width: '10%' },
+        { id: 'email', label: 'Email', width: '20%' },
+        { id: 'address', label: 'Dirección', width: '20%' },
+        { id: 'representa', label: 'Representa', width: '15%' },
+        { id: 'actions', label: 'Acciones', width: '15%' }
     ]);
     const [columnsNIF, setColumnsNIF] = useState([
-        { id: 'nif', label: 'NIF' },
-        { id: 'name', label: 'Nombre' },
-        { id: 'surname', label: 'Apellido' },
-        { id: 'tlf', label: 'Teléfono' },
-        { id: 'email', label: 'Email' },
-        { id: 'address', label: 'Dirección' },
-        { id: 'representa', label: 'Representa' },
-        { id: 'actions', label: 'Acciones' }
+        { id: 'nif', label: 'NIF', width: '10%' },
+        { id: 'name', label: 'Nombre', width: '10%' },
+        { id: 'surname', label: 'Apellido', width: '13.5%' },
+        { id: 'tlf', label: 'Teléfono', width: '10%' },
+        { id: 'email', label: 'Email', width: '20%' },
+        { id: 'address', label: 'Dirección', width: '20%' },
+        { id: 'representa', label: 'Representa', width: '15%' },
+        { id: 'actions', label: 'Acciones', width: '15%' }
     ]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [currentPeticionario, setCurrentPeticionario] = useState(null);
@@ -41,54 +40,90 @@ const MainPeticionarios = ({ className }) => {
     const [peticionarioToDelete, setPeticionarioToDelete] = useState(null);
     const [isEmpresaModalOpen, setIsEmpresaModalOpen] = useState(false);
     const [currentEmpresa, setCurrentEmpresa] = useState(null);
+    const [peticionarios, setPeticionarios] = useState([]);
+    const [empresas, setEmpresas] = useState([]);
 
-    const queryClient = useQueryClient();
+    const token = localStorage.getItem('token');
 
-    // Use Query for fetch peticionarios
-    const { data: peticionarios, isLoading: loadingPeticionarios, isError: errorPeticionarios } = useQuery({
-        queryKey: ['peticionarios'],
-        queryFn: () => fetch('http://143.131.204.234:9000/api/peticionarios').then(res => res.json()),
-    });
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const [peticionariosResponse, empresasResponse] = await Promise.all([
+                    fetch('http://localhost:9000/api/peticionarios', {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    }),
+                    fetch('http://localhost:9000/api/empresas', {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    })
+                ]);
 
-    const { data: empresas, isLoading: loadingEmpresas, isError: errorEmpresas } = useQuery({
-        queryKey: ['empresas'],
-        queryFn: () => fetch('http://143.131.204.234:9000/api/empresas').then(res => res.json()),
-    });
+                if (!peticionariosResponse.ok || !empresasResponse.ok) {
+                    throw new Error('Error al cargar datos');
+                }
+
+                const peticionariosData = await peticionariosResponse.json();
+                const empresasData = await empresasResponse.json();
+
+                setPeticionarios(peticionariosData);
+                setEmpresas(empresasData);
+            } catch (error) {
+                toast.error('Error al cargar datos: ' + error.message, {
+                    style: {
+                        background: '#F44336',
+                        color: 'white',
+                        fontWeight: 'bold'
+                    }
+                });
+            }
+        };
+
+        fetchData();
+    }, [token]);
 
     const mutationPeticionario = useMutation({
         mutationFn: (peticionarioData) => {
-            console.log('Datos del peticionario antes de enviar:', peticionarioData);
-            
             let url, method;
             if (peticionarioData.id) {
-                url = `http://143.131.204.234:9000/api/peticionarios/${peticionarioData.id}`;
+                url = `http://localhost:9000/api/peticionarios/${peticionarioData.id}`;
                 method = 'PUT';
             } else {
-                url = 'http://143.131.204.234:9000/api/peticionarios';
+                url = 'http://localhost:9000/api/peticionarios';
                 method = 'POST';
             }
     
-            console.log('URL:', url);
-            console.log('Método:', method);
-            
             return fetch(url, {
                 method: method,
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify(peticionarioData),
             });
         },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['peticionarios'] });
-            toast.success('Peticionario guardado correctamente', {
-                style: {
-                    background: '#4CAF50',
-                    color: 'white',
-                    fontWeight: 'bold'
+        onSuccess: (response) => {
+            response.json().then(data => {
+                let updatedPeticionarios;
+                if (data.id) {
+                    updatedPeticionarios = peticionarios.map(p => p.id === data.id ? data : p);
+                } else {
+                    updatedPeticionarios = [...peticionarios, data];
                 }
+                setPeticionarios(updatedPeticionarios);
+                toast.success('Peticionario guardado correctamente', {
+                    style: {
+                        background: '#4CAF50',
+                        color: 'white',
+                        fontWeight: 'bold'
+                    }
+                });
+                setIsModalOpen(false);
             });
-            setIsModalOpen(false);
         },
         onError: (error) => {
             toast.error('Error al guardar el peticionario: ' + error.message, {
@@ -101,14 +136,16 @@ const MainPeticionarios = ({ className }) => {
         },
     });
 
-    // Mutation for deleting peticionario
     const mutationDeletePeticionario = useMutation({
         mutationFn: (id) => 
-            fetch(`http://143.131.204.234:9000/api/peticionarios/${id}`, {
+            fetch(`http://localhost:9000/api/peticionarios/${id}`, {
                 method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
             }),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['peticionarios'] });
+            setPeticionarios(prevPeticionarios => prevPeticionarios.filter(p => p.id !== peticionarioToDelete));
             toast.success('Peticionario eliminado correctamente', {
                 style: {
                     background: '#4CAF50',
@@ -130,28 +167,29 @@ const MainPeticionarios = ({ className }) => {
         },
     });
 
-    // Mutation for adding empresa
     const mutationAddEmpresa = useMutation({
         mutationFn: (empresaData) => 
-            fetch('http://143.131.204.234:9000/api/empresas', {
+            fetch('http://localhost:9000/api/empresas', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify(empresaData),
             }),
         onSuccess: (response) => {
-            const newEmpresa = response.json();
-            queryClient.setQueryData(['empresas'], old => [...old, newEmpresa]);
-            toast.success('Empresa añadida correctamente', {
-                style: {
-                    background: '#4CAF50',
-                    color: 'white',
-                    fontWeight: 'bold'
-                }
+            response.json().then(newEmpresa => {
+                setEmpresas(prevEmpresas => [...prevEmpresas, newEmpresa]);
+                toast.success('Empresa añadida correctamente', {
+                    style: {
+                        background: '#4CAF50',
+                        color: 'white',
+                        fontWeight: 'bold'
+                    }
+                });
+                setIsEmpresaModalOpen(false);
+                mutationPeticionario.mutate({ ...currentPeticionario, representa: newEmpresa });
             });
-            setIsEmpresaModalOpen(false);
-            mutationPeticionario.mutate({ ...currentPeticionario, representa: newEmpresa });
         },
         onError: (error) => {
             toast.error('Error al añadir la empresa: ' + error.message, {
@@ -170,10 +208,9 @@ const MainPeticionarios = ({ className }) => {
     };
 
     const openEditModal = (peticionario) => {
-        // Si 'representa' solo contiene el ID, busca la empresa correspondiente
         let representa = null;
         if (peticionario.representa) {
-            const empresa = empresas && empresas.find(e => e.id === peticionario.representa);
+            const empresa = empresas.find(e => e.id === peticionario.representa);
             representa = empresa ? {
                 id: empresa.id,
                 name: empresa.name,
@@ -187,10 +224,8 @@ const MainPeticionarios = ({ className }) => {
         setIsModalOpen(true);
     };
 
-
     const addOrUpdatePeticionario = (peticionarioData) => {
         if (peticionarioData.representa && peticionarioData.representa.id) {
-            // Si estamos representando una empresa, buscamos la empresa por su ID
             const empresa = empresas.find(e => e.id === peticionarioData.representa.id);
             if (empresa) {
                 peticionarioData.representa = {
@@ -212,7 +247,7 @@ const MainPeticionarios = ({ className }) => {
         }
     };
 
-    const filteredPeticionariosDNI = Array.isArray(peticionarios) ? peticionarios.filter(p => p.dni && (
+    const filteredPeticionariosDNI = peticionarios.filter(p => p.dni && (
         p.dni.includes(searchTerm) ||
         (p.name && p.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (p.surname && p.surname.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -223,9 +258,9 @@ const MainPeticionarios = ({ className }) => {
             p.representa.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             p.representa.cif.toLowerCase().includes(searchTerm.toLowerCase())
         ))
-    )) : [];
+    ));
 
-    const filteredPeticionariosNIF = Array.isArray(peticionarios) ? peticionarios.filter(p => p.nif && (
+    const filteredPeticionariosNIF = peticionarios.filter(p => p.nif && (
         p.nif.includes(searchTerm) ||
         (p.name && p.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (p.surname && p.surname.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -236,7 +271,7 @@ const MainPeticionarios = ({ className }) => {
             p.representa.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             p.representa.cif.toLowerCase().includes(searchTerm.toLowerCase())
         ))
-    )) : [];
+    ));
 
     const currentItemsDNI = filteredPeticionariosDNI.slice(
         (currentPageDNI - 1) * itemsPerPage, currentPageDNI * itemsPerPage
@@ -251,7 +286,6 @@ const MainPeticionarios = ({ className }) => {
 
     const handleDragEndDNI = (event) => {
         const { active, over } = event;
-
         if (active.id !== over.id) {
             setColumnsDNI((items) => {
                 const oldIndex = items.findIndex(item => item.id === active.id);
@@ -263,7 +297,6 @@ const MainPeticionarios = ({ className }) => {
 
     const handleDragEndNIF = (event) => {
         const { active, over } = event;
-
         if (active.id !== over.id) {
             setColumnsNIF((items) => {
                 const oldIndex = items.findIndex(item => item.id === active.id);
@@ -273,149 +306,113 @@ const MainPeticionarios = ({ className }) => {
         }
     };
 
-    if (loadingPeticionarios || loadingEmpresas) return <div>Cargando peticionarios y empresas...</div>;
-    if (errorPeticionarios || errorEmpresas) return <div>Error al cargar datos: {errorPeticionarios?.message || errorEmpresas?.message}</div>;
+    const renderTable = (columns, currentItems, currentPage, setCurrentPage, totalPages, handleDragEnd, title) => (
+        <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={columns.filter(column => column.id !== 'actions').map(column => column.id)} strategy={horizontalListSortingStrategy}>
+                <div className="mb-4">
+                    <div className="mb-2">
+                        <h3 className="text-lg font-semibold">{title}</h3>
+                    </div>
+                    <table className="min-w-full border border-gray-300 table-fixed w-full">
+                        <thead className="bg-gray-100">
+                            <tr>
+                                {columns.map((column) => (
+                                    column.id !== 'actions' ? (
+                                        <SortableItem key={column.id} id={column.id} width={column.width}>
+                                            <span className="inline-block whitespace-nowrap overflow-hidden text-ellipsis max-w-full">
+                                                {column.label}
+                                            </span>
+                                        </SortableItem>
+                                    ) : (
+                                        <th key={column.id} className="border px-4 py-2 text-left whitespace-nowrap" style={{ width: column.width }}>{column.label}</th>
+                                    )
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {currentItems.map((peticionario) => (
+                                <tr key={peticionario.id} className="border-b hover:bg-gray-50">
+                                    {columns.map((column) => (
+                                        <td key={column.id} className="border px-4 py-2">
+                                            {column.id === 'actions' ? (
+                                                <>
+                                                    <button onClick={() => openEditModal(peticionario)} className="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 mr-1">Modificar</button>
+                                                    <button className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600" onClick={() => openDeleteModal(peticionario.id)}>Eliminar</button>
+                                                </>
+                                            ) : column.id === 'representa' ? (
+                                                peticionario.representaId ? 
+                                                    (empresas.find(e => e.id === peticionario.representaId)?.name || 'Empresa no encontrada') 
+                                                : ''
+                                            ) : (
+                                                peticionario[column.id]
+                                            )}
+                                        </td>
+                                    ))}
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                    <div className="flex justify-between items-center mt-4">
+                        <span>Página {currentPage} de {totalPages}</span>
+                        <div className="flex">
+                            <button 
+                                disabled={currentPage === 1} 
+                                onClick={() => setCurrentPage(currentPage - 1)}
+                                className={`bg-gray-300 px-3 py-1 rounded ${currentPage === 1 && 'opacity-50 cursor-not-allowed'}`}
+                            >
+                                Anterior
+                            </button>
+                            <button 
+                                disabled={currentPage === totalPages} 
+                                onClick={() => setCurrentPage(currentPage + 1)}
+                                className={`bg-gray-300 px-3 py-1 rounded ${currentPage === totalPages && 'opacity-50 cursor-not-allowed'}`}
+                            >
+                                Siguiente
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </SortableContext>
+        </DndContext>
+    );
+
     return (
-        <div id="MainPeticionarios" className={className}>
+        <div id="MainPeticionarios" className={`bg-gray-200 p-5 rounded-lg transition-all duration-300 ${className}`}>
             <Toaster />
-            <div id="Encabezado">
-                <h2>PETICIONARIOS</h2>
-                <div id="filtroContainer">
-                    <input
-                        type="text"
-                        id="filtro"
-                        placeholder="Buscar..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                    <img src={busqueda} alt="Buscar" id="lupa" />
+            <div id="Encabezado" className="mb-4">
+                <div id="EncabezadoTabla" className="flex justify-between items-center">
+                    <h2 className="text-2xl font-semibold">PETICIONARIOS</h2>
+                    <div id="filtroContainer" className="flex items-center">
+                        <input
+                            type="text"
+                            id="filtro"
+                            className="border rounded p-2 w-64 transition-all duration-300"
+                            placeholder="Buscar..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                        <img src={busqueda} alt="Buscar" id="lupa" className="ml-2 w-6 h-6 cursor-pointer" />
+                    </div>
                 </div>
             </div>
 
-            <button onClick={openAddModal}>Añadir Nuevo Peticionario</button>
+            {renderTable(columnsDNI, currentItemsDNI, currentPageDNI, setCurrentPageDNI, totalPagesDNI, handleDragEndDNI, 'Peticionarios (DNI)')}
+            {renderTable(columnsNIF, currentItemsNIF, currentPageNIF, setCurrentPageNIF, totalPagesNIF, handleDragEndNIF, 'Peticionarios (NIF)')}
 
-            <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEndDNI}>
-                <SortableContext items={columnsDNI.filter(column => column.id !== 'actions').map(column => column.id)} strategy={horizontalListSortingStrategy}>
-                    <div id="TablaDNI">
-                        <div id="SubEncabezadoTabla">
-                            <h3>Peticionarios (DNI)</h3>
-                        </div>
-                        <div id="CuerpoTabla">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        {columnsDNI.map((column) => (
-                                            column.id !== 'actions' ? (
-                                                <SortableItem key={column.id} id={column.id}>
-                                                    {column.label}
-                                                </SortableItem>
-                                            ) : (
-                                                <th key={column.id}>{column.label}</th>
-                                            )
-                                        ))}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {currentItemsDNI.map((peticionario) => (
-                                        <tr key={peticionario.id}>
-                                            {columnsDNI.map((column) => (
-                                                <td key={column.id}>
-                                                    {column.id === 'actions' ? (
-                                                        <>
-                                                            <button onClick={() => openEditModal(peticionario)}>Modificar</button>
-                                                            <button className="btn-delete" onClick={() => openDeleteModal(peticionario.id)}>Eliminar</button>
-                                                        </>
-                                                    ) : column.id === 'representa' ? (
-                                                        // Si 'representa' solo tiene ID, buscamos la empresa aquí
-                                                        peticionario.representaId ? 
-                                                            ((empresas && empresas.find(e => e.id === peticionario.representaId)?.name) || 'Empresa no encontrada') 
-                                                        : ''
-                                                    ) : (
-                                                        peticionario[column.id]
-                                                    )}
-                                                </td>
-                                            ))}
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                            <div id="PaginacionDNI">
-                                <span>Página {currentPageDNI} de {totalPagesDNI}</span>
-                                <div id="Botones">
-                                    <button disabled={currentPageDNI === 1} onClick={() => setCurrentPageDNI(currentPageDNI - 1)}>Anterior</button>
-                                    <button disabled={currentPageDNI === totalPagesDNI} onClick={() => setCurrentPageDNI(currentPageDNI + 1)}>Siguiente</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </SortableContext>
-            </DndContext>
+            <div className="flex justify-end mt-4">
+                <button onClick={openAddModal} className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+                    Añadir Nuevo Peticionario
+                </button>
+            </div>
 
-            <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEndNIF}>
-                <SortableContext items={columnsNIF.filter(column => column.id !== 'actions').map(column => column.id)} strategy={horizontalListSortingStrategy}>
-                    <div id="TablaNIF">
-                        <div id="SubEncabezadoTabla">
-                            <h3>Peticionarios (NIF)</h3>
-                        </div>
-                        <div id="CuerpoTabla">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        {columnsNIF.map((column) => (
-                                            column.id !== 'actions' ? (
-                                                <SortableItem key={column.id} id={column.id}>
-                                                    {column.label}
-                                                </SortableItem>
-                                            ) : (
-                                                <th key={column.id}>{column.label}</th>
-                                            )
-                                        ))}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {currentItemsNIF.map((peticionario) => (
-                                        <tr key={peticionario.id}>
-                                            {columnsNIF.map((column) => (
-                                                <td key={column.id}>
-                                                    {column.id === 'actions' ? (
-                                                        <>
-                                                            <button onClick={() => openEditModal(peticionario)}>Modificar</button>
-                                                            <button className="btn-delete" onClick={() => openDeleteModal(peticionario.id)}>Eliminar</button>
-                                                        </>
-                                                    ) : column.id === 'representa' ? (
-                                                        peticionario.representaId ? 
-                                                        ((empresas && empresas.find(e => e.id === peticionario.representaId)?.name) || 'Empresa no encontrada') : ''
-                                                    ) : (
-                                                        peticionario[column.id]
-                                                    )}
-                                                </td>
-                                            ))}
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                            <div id="PaginacionNIF">
-                                <span>Página {currentPageNIF} de {totalPagesNIF}</span>
-                                <div id="Botones">
-                                    <button disabled={currentPageNIF === 1} onClick={() => setCurrentPageNIF(currentPageNIF - 1)}>Anterior</button>
-                                    <button disabled={currentPageNIF === totalPagesNIF} onClick={() => setCurrentPageNIF(currentPageNIF + 1)}>Siguiente</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    </SortableContext>
-            </DndContext>
-
-            {isModalOpen && (
-                <ModalPeticionarios
-                    isOpen={isModalOpen}
-                    onClose={() => setIsModalOpen(false)}
-                    onAdd={addOrUpdatePeticionario}
-                    onUpdate={addOrUpdatePeticionario}
-                    peticionario={currentPeticionario}
-                    empresas={empresas}
-                />
-            )}
+            <ModalPeticionarios
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                onAdd={addOrUpdatePeticionario}
+                onUpdate={addOrUpdatePeticionario}
+                peticionario={currentPeticionario}
+                empresas={empresas}
+            />
 
             {isEmpresaModalOpen && (
                 <ModalEmpresas
@@ -428,10 +425,10 @@ const MainPeticionarios = ({ className }) => {
 
             <ModalGenerico
                 isOpen={isDeleteModalOpen}
-                title="Eliminar peticionario"
-                message="¿Seguro que quiere eliminar a este peticionario?"
                 onClose={() => setIsDeleteModalOpen(false)}
                 onConfirm={confirmDelete}
+                title="Confirmación"
+                message="¿Seguro que quieres eliminar a este peticionario?"
             />
         </div>
     );

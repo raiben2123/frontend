@@ -1,14 +1,12 @@
-import React, { useState } from "react";
-import '../css/MainEmpresas.css';
+import React, { useState, useEffect } from "react";
 import busqueda from '../img/busqueda.png';
 import { DndContext, closestCenter } from '@dnd-kit/core';
 import { arrayMove, SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable';
 import { SortableItem } from './SortableItem';
 import ModalEmpresas from './ModalEmpresas';
 import ModalGenerico from './ModalGenerico';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { Toaster, toast } from 'sonner';
-import { fetchEmpresas, fetchPeticionarios } from "../api/apiService";
 
 const MainEmpresas = ({ className }) => {
     const [searchTerm, setSearchTerm] = useState('');
@@ -27,29 +25,75 @@ const MainEmpresas = ({ className }) => {
     const [selectedEmpresa, setSelectedEmpresa] = useState(null);
     const [isModalConfirmacionOpen, setIsModalConfirmacionOpen] = useState(false);
     const [empresaToDelete, setEmpresaToDelete] = useState(null);
+    const [empresas, setEmpresas] = useState([]);
+    const [empresaToDeleteId, setEmpresaToDeleteId] = useState(null);
+    const [peticionarios, setPeticionarios] = useState([]);
 
-    const queryClient = useQueryClient();
+    const token = localStorage.getItem('token');
 
-    // Use Query for fetching empresas
-    const { data: empresas, isLoading, isError } = useQuery({
-        queryKey: ['empresas'],
-        queryFn: fetchEmpresas
-    });
+    useEffect(() => {
+        const savedEmpresas = localStorage.getItem('empresas');
+        const savedPeticionarios = localStorage.getItem('peticionarios');
 
-    const { data: peticionarios} = useQuery({
-        queryKey: ['peticionarios'],
-        queryFn: fetchPeticionarios
-    });
+        if (savedEmpresas) {
+            setEmpresas(JSON.parse(savedEmpresas));
+        } else {
+            fetchEmpresas();
+        }
 
-    // Mutation for adding or updating an empresa
+        if (savedPeticionarios) {
+            setPeticionarios(JSON.parse(savedPeticionarios));
+        } else {
+            fetchPeticionarios();
+        }
+    }, []);
+
+    // Función para obtener datos de empresas
+    const fetchEmpresas = async () => {
+        try {
+            const response = await fetch('http://localhost:9000/api/empresas', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+            const data = await response.json();
+            setEmpresas(data);
+            localStorage.setItem('empresas', JSON.stringify(data));
+        } catch (error) {
+            toast.error('Error al cargar las empresas', {
+                style: { background: '#F44336', color: 'white', fontWeight: 'bold' },
+            });
+        }
+    };
+
+    // Función para obtener datos de peticionarios
+    const fetchPeticionarios = async () => {
+        try {
+            const response = await fetch('http://localhost:9000/api/peticionarios', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+            const data = await response.json();
+            setPeticionarios(data);
+            localStorage.setItem('peticionarios', JSON.stringify(data));
+        } catch (error) {
+            toast.error('Error al cargar los peticionarios', {
+                style: { background: '#F44336', color: 'white', fontWeight: 'bold' },
+            });
+        }
+    };
+
     const mutationEmpresa = useMutation({
         mutationFn: (empresaData) => {
             let url, method;
             if (empresaData.id) {
-                url = `http://143.131.204.234:9000/api/empresas/${empresaData.id}`;
+                url = `http://localhost:9000/api/empresas/${empresaData.id}`;
                 method = 'PUT';
             } else {
-                url = 'http://143.131.204.234:9000/api/empresas';
+                url = 'http://localhost:9000/api/empresas';
                 method = 'POST';
             }
 
@@ -57,21 +101,35 @@ const MainEmpresas = ({ className }) => {
                 method: method,
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
                 },
                 body: JSON.stringify(empresaData),
             });
         },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['empresas'] });
-            toast.success('Empresa guardada correctamente', {
-                style: {
-                    background: '#4CAF50',
-                    color: 'white',
-                    fontWeight: 'bold'
+        onSuccess: (response) => {
+            response.json().then(data => {
+                const storedEmpresas = JSON.parse(localStorage.getItem('empresas')) || [];
+                let updatedEmpresas;
+
+                if (data.id) {
+                    updatedEmpresas = storedEmpresas.map(e => e.id === data.id ? data : e);
+                } else {
+                    updatedEmpresas = [...storedEmpresas, data];
                 }
+
+                setEmpresas(updatedEmpresas);
+                localStorage.setItem('empresas', JSON.stringify(updatedEmpresas));
+
+                toast.success('Empresa guardada correctamente', {
+                    style: {
+                        background: '#4CAF50',
+                        color: 'white',
+                        fontWeight: 'bold'
+                    }
+                });
+                setIsModalOpen(false);
+                setSelectedEmpresa(null);
             });
-            setIsModalOpen(false);
-            setSelectedEmpresa(null);
         },
         onError: (error) => {
             toast.error('Error al guardar la empresa: ' + error.message, {
@@ -84,23 +142,33 @@ const MainEmpresas = ({ className }) => {
         },
     });
 
-    // Mutation for deleting empresa
     const mutationDeleteEmpresa = useMutation({
         mutationFn: (id) =>
-            fetch(`http://143.131.204.234:9000/api/empresas/${id}`, {
+            fetch(`http://localhost:9000/api/empresas/${id}`, {
                 method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
             }),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['empresas'] });
-            toast.success('Empresa eliminada correctamente', {
-                style: {
-                    background: '#4CAF50',
-                    color: 'white',
-                    fontWeight: 'bold'
-                }
-            });
-            setIsModalConfirmacionOpen(false);
-            setEmpresaToDelete(null);
+            if (empresaToDeleteId) {
+                setEmpresas(prevEmpresas => {
+                    const updatedEmpresas = prevEmpresas.filter(empresa =>
+                        empresa.id.toString() !== empresaToDeleteId.toString()
+                    );
+                    localStorage.setItem('empresas', JSON.stringify(updatedEmpresas));
+                    return updatedEmpresas;
+                });
+                toast.success('Empresa eliminada correctamente', {
+                    style: {
+                        background: '#4CAF50',
+                        color: 'white',
+                        fontWeight: 'bold'
+                    }
+                });
+                setIsModalConfirmacionOpen(false);
+                setEmpresaToDeleteId(null);
+            }
         },
         onError: (error) => {
             toast.error('Error al eliminar la empresa: ' + error.message, {
@@ -113,11 +181,11 @@ const MainEmpresas = ({ className }) => {
         },
     });
 
-    const filteredEmpresas = Array.isArray(empresas) ? empresas.filter(empresa =>
+    const filteredEmpresas = empresas.filter(empresa =>
         Object.keys(empresa).some(key =>
             String(empresa[key]).toLowerCase().includes(searchTerm.toLowerCase())
         )
-    ) : [];
+    );
 
     const currentItems = filteredEmpresas.slice(
         (currentPage - 1) * itemsPerPage,
@@ -129,34 +197,33 @@ const MainEmpresas = ({ className }) => {
     const handleDragEnd = (event) => {
         const { active, over } = event;
         if (active.id !== over.id) {
-            setColumns(columns => {
-                const oldIndex = columns.findIndex(c => c.id === active.id);
-                const newIndex = columns.findIndex(c => c.id === over.id);
+            setColumns((columns) => {
+                const oldIndex = columns.findIndex((c) => c.id === active.id);
+                const newIndex = columns.findIndex((c) => c.id === over.id);
                 return arrayMove(columns, oldIndex, newIndex);
             });
         }
     };
 
-    if (isLoading) return <div>Cargando empresas...</div>;
-    if (isError) return <div>Error al cargar datos: {isError.message}</div>;
     return (
-        <div id="MainEmpresas" className={className}>
+        <div id="MainEmpresas" className={`bg-gray-200 p-5 rounded-lg transition-all duration-300 ${className}`}>
             <Toaster />
-            <div id="Encabezado">
-                <h2>EMPRESAS</h2>
-                <div id="filtroContainer">
-                    <input
-                        type="text"
-                        id="filtro"
-                        placeholder="Buscar..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                    <img src={busqueda} alt="Buscar" id="lupa" />
+            <div id="Encabezado" className="mb-4">
+                <div id="EncabezadoTabla" className="flex justify-between items-center">
+                    <h2 className="text-2xl font-semibold">EMPRESAS</h2>
+                    <div id="filtroContainer" className="flex items-center">
+                        <input
+                            type="text"
+                            id="filtro"
+                            className="border rounded p-2 w-64 transition-all duration-300"
+                            placeholder="Buscar..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                        <img src={busqueda} alt="Buscar" id="lupa" className="ml-2 w-6 h-6 cursor-pointer" />
+                    </div>
                 </div>
             </div>
-
-            <button onClick={() => { setSelectedEmpresa(null); setIsModalOpen(true); }}>Añadir Nueva Empresa</button>
 
             <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                 <SortableContext
@@ -164,36 +231,53 @@ const MainEmpresas = ({ className }) => {
                     strategy={horizontalListSortingStrategy}
                 >
                     <div id="TablaEmpresas">
-                        <div id="SubEncabezadoTabla">
-                            <h3>Empresas</h3>
-                        </div>
                         <div id="CuerpoTabla">
-                            <table>
-                                <thead>
+                            <table className="min-w-full border border-gray-300">
+                                <thead className="bg-gray-100">
                                     <tr>
-                                        {columns.map((column) => (
-                                            column.id !== 'actions' ?
-                                                <SortableItem key={column.id} id={column.id}>
-                                                    {column.label}
+                                        {columns.map((column) => {
+                                            if (column.id === 'actions') {
+                                                return <th key={column.id} className="border px-4 py-2 text-left">{column.label}</th>;
+                                            }
+
+                                            let width;
+                                            switch (column.id) {
+                                                case 'cif':
+                                                    width = '5%'; // Por ejemplo, ancho más pequeño para CIF
+                                                    break;
+                                                case 'name':
+                                                    width = '20%'; // Ancho más grande para el nombre
+                                                    break;
+                                                case 'address':
+                                                    width = '25%'; // Ancho más grande para la dirección
+                                                    break;
+                                                default:
+                                                    width = 'auto'; // Deja que otros campos se ajusten automáticamente
+                                            }
+
+                                            return (
+                                                <SortableItem key={column.id} id={column.id} width={width}>
+                                                    <span className="inline-block whitespace-nowrap overflow-hidden text-ellipsis max-w-full">
+                                                        {column.label}
+                                                    </span>
                                                 </SortableItem>
-                                                :
-                                                <th key={column.id}>{column.label}</th>
-                                        ))}
+                                            );
+                                        })}
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {currentItems.map((empresa) => (
-                                        <tr key={empresa.id}>
+                                        <tr key={empresa.id} className="border-b hover:bg-gray-50">
                                             {columns.map((column) => (
-                                                <td key={column.id}>
+                                                <td key={column.id} className="border px-4 py-2">
                                                     {column.id === 'actions' ? (
                                                         <>
-                                                            <button onClick={() => { setSelectedEmpresa(empresa); setIsModalOpen(true); }}>Modificar</button>
-                                                            <button className="btn-delete" onClick={() => { setEmpresaToDelete(empresa.id); setIsModalConfirmacionOpen(true); }}>Eliminar</button>
+                                                            <button onClick={() => { setSelectedEmpresa(empresa); setIsModalOpen(true); }} className="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600">Modificar</button>
+                                                            <button className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 ml-2" onClick={() => { setEmpresaToDelete(empresa); setIsModalConfirmacionOpen(true); }}>Eliminar</button>
                                                         </>
                                                     ) : column.id === 'representante' ? (
                                                         empresa.representanteId ?
-                                                            (peticionarios && peticionarios.find(p => p.id === empresa.representanteId)?.name + " " + peticionarios.find(p => p.id === empresa.representanteId)?.surname) || '' : ''
+                                                            (peticionarios.find(p => p.id === empresa.representanteId)?.name + " " + peticionarios.find(p => p.id === empresa.representanteId)?.surname) || '' : ''
                                                     ) : (
                                                         empresa[column.id]
                                                     )}
@@ -203,17 +287,35 @@ const MainEmpresas = ({ className }) => {
                                     ))}
                                 </tbody>
                             </table>
-                            <div id="PaginacionEmpresas">
+                            <div id="PaginacionEmpresas" className="flex justify-between items-center mt-4">
                                 <span>Página {currentPage} de {totalPages}</span>
-                                <div id="Botones">
-                                    <button disabled={currentPage === 1} onClick={() => setCurrentPage(prev => prev - 1)}>Anterior</button>
-                                    <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(prev => prev + 1)}>Siguiente</button>
+                                <div id="Botones" className="flex">
+                                    <button
+                                        disabled={currentPage === 1}
+                                        onClick={() => setCurrentPage(prev => prev - 1)}
+                                        className={`bg-gray-300 px-3 py-1 rounded ${currentPage === 1 && 'opacity-50 cursor-not-allowed'}`}
+                                    >
+                                        Anterior
+                                    </button>
+                                    <button
+                                        disabled={currentPage === totalPages}
+                                        onClick={() => setCurrentPage(prev => prev + 1)}
+                                        className={`bg-gray-300 px-3 py-1 rounded ${currentPage === totalPages && 'opacity-50 cursor-not-allowed'}`}
+                                    >
+                                        Siguiente
+                                    </button>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </SortableContext>
             </DndContext>
+
+            <div className="mt-4 flex justify-end">
+                <button onClick={() => { setSelectedEmpresa(null); setIsModalOpen(true); }} className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+                    Añadir Nueva Empresa
+                </button>
+            </div>
 
             <ModalEmpresas
                 isOpen={isModalOpen}
@@ -224,10 +326,16 @@ const MainEmpresas = ({ className }) => {
 
             <ModalGenerico
                 isOpen={isModalConfirmacionOpen}
-                title="Confirmar Eliminación"
-                message="¿Estás seguro de que deseas eliminar esta empresa?"
                 onClose={() => setIsModalConfirmacionOpen(false)}
-                onConfirm={() => mutationDeleteEmpresa.mutate(empresaToDelete)}
+                onConfirm={() => {
+                    if (empresaToDelete) {
+                        setEmpresaToDeleteId(empresaToDelete.id);
+                        mutationDeleteEmpresa.mutate(empresaToDelete.id);
+                        setEmpresaToDelete(null);
+                    }
+                }}
+                title="Confirmación"
+                message="¿Estás seguro de que deseas eliminar esta empresa?"
             />
         </div>
     );
